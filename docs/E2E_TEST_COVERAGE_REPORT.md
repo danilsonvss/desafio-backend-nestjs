@@ -216,8 +216,8 @@ it('should allow multiple affiliates for same producer', async () => {
 
 Nenhum gap identificado. Todos os testes foram implementados.
 
-**Cobertura**: 3/5 regras (60%)  
-**Status**: ⚠️ **Parcial** - Faltam 2 testes (1 crítico de validação)
+**Cobertura**: 5/5 regras (100%)  
+**Status**: ✅ **Completo**
 
 ---
 
