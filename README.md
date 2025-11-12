@@ -304,10 +304,11 @@ Todos os erros seguem um formato consistente:
 
 ### Documentos Disponíveis
 
-- **Regras de Negócio - Auth**: `docs/auth-business-rules.md`
-- **Implementação Técnica - Auth**: `docs/auth-module-implementation.md`
-- **Proposta de Refatoração**: `docs/refactoring-proposal.md`
-- **Setup Docker**: `DOCKER_SETUP.md`
+- **📋 Regras de Negócio**: `docs/BUSINESS_RULES.md` - Documentação completa de todas as regras de negócio
+- **🏗️ Arquitetura**: `docs/ARCHITECTURE.md` - Documentação da arquitetura do sistema
+- **💰 Balance Module**: `docs/balance-module-implementation.md` - Documentação técnica do módulo de saldos
+- **💳 Tax Module**: Implementação completa de taxas (documentação em `docs/BUSINESS_RULES.md`)
+- **🔄 Proposta de Refatoração**: `docs/refactoring-proposal.md` - Análise e refatorações aplicadas
 
 ### Arquitetura
 
@@ -317,11 +318,24 @@ O projeto segue os princípios de:
 - **SOLID**: Inversão de dependências, responsabilidade única, etc.
 - **TDD**: Desenvolvimento orientado a testes
 
+### Regras de Negócio
+
+Todas as regras de negócio estão documentadas em `docs/BUSINESS_RULES.md`, incluindo:
+
+- 🔐 **Autenticação e Autorização**: JWT, validação de tokens, controle de acesso
+- 👤 **Usuários**: Cadastro, login, validações, hash de senhas
+- 💰 **Saldos**: Operações de crédito/débito, validações, regras de saldo
+- 💳 **Taxas**: Criação, atualização, cálculo, tipos de taxa
+- 💸 **Pagamentos** (futuro): Fluxo de pagamento, cálculo de taxas
+- 💵 **Comissões** (futuro): Distribuição de comissões entre participantes
+- 🤝 **Afiliação** (futuro): Relacionamentos entre produtores, afiliados e coprodutores
+
 ### Cobertura de Testes
 
-- ✅ **Testes Unitários**: 48 testes em 12 suites
-- ✅ **Testes E2E**: 14 testes em 2 suites
+- ✅ **Testes Unitários**: 149 testes em 27 suites
+- ✅ **Testes E2E**: 43 testes em 4 suites
 - ✅ **Cobertura**: Todas as camadas testadas
+- ✅ **Módulos Testados**: Auth, Balance, Tax, Health, Shared
 
 ## 🛠️ Scripts Disponíveis
 
