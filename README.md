@@ -302,6 +302,14 @@ Todos os erros seguem um formato consistente:
 
 ## 📚 Documentação
 
+### Swagger/OpenAPI
+
+A documentação interativa da API está disponível através do Swagger UI:
+
+- **URL**: `http://localhost:3000/api`
+- **Descrição**: Documentação completa de todos os endpoints, DTOs, schemas e exemplos
+- **Autenticação**: Use o botão "Authorize" para adicionar o token JWT e testar endpoints protegidos
+
 ### Documentos Disponíveis
 
 - **📋 Regras de Negócio**: `docs/BUSINESS_RULES.md` - Documentação completa de todas as regras de negócio
