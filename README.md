@@ -326,16 +326,16 @@ Todas as regras de negócio estão documentadas em `docs/BUSINESS_RULES.md`, inc
 - 👤 **Usuários**: Cadastro, login, validações, hash de senhas
 - 💰 **Saldos**: Operações de crédito/débito, validações, regras de saldo
 - 💳 **Taxas**: Criação, atualização, cálculo, tipos de taxa
-- 💸 **Pagamentos** (futuro): Fluxo de pagamento, cálculo de taxas
-- 💵 **Comissões** (futuro): Distribuição de comissões entre participantes
-- 🤝 **Afiliação** (futuro): Relacionamentos entre produtores, afiliados e coprodutores
+- 💸 **Pagamentos**: Fluxo de pagamento, cálculo de taxas, distribuição de comissões
+- 💵 **Comissões**: Distribuição automática de comissões entre participantes
+- 🤝 **Afiliação**: Relacionamentos entre produtores, afiliados e coprodutores
 
 ### Cobertura de Testes
 
-- ✅ **Testes Unitários**: 149 testes em 27 suites
-- ✅ **Testes E2E**: 43 testes em 4 suites
+- ✅ **Testes Unitários**: 212 testes em 34 suites
+- ✅ **Testes E2E**: 63 testes em 7 suites
 - ✅ **Cobertura**: Todas as camadas testadas
-- ✅ **Módulos Testados**: Auth, Balance, Tax, Health, Shared
+- ✅ **Módulos Testados**: Auth, Balance, Tax, Affiliation, Payment, Health, Shared
 
 ## 🛠️ Scripts Disponíveis
 

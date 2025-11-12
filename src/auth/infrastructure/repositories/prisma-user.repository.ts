@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { UserEntity } from '../../domain/entities/user.entity';
+import { UserRole } from '../../../shared/domain/enums/user-role.enum';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 
 @Injectable()
@@ -44,6 +45,14 @@ export class PrismaUserRepository implements IUserRepository {
     });
 
     return count > 0;
+  }
+
+  async findByRole(role: UserRole): Promise<UserEntity | null> {
+    const user = await this.prisma.client.user.findFirst({
+      where: { role },
+    });
+
+    return user ? UserEntity.fromPrisma(user) : null;
   }
 }
 

@@ -67,13 +67,15 @@ Desenvolver uma API RESTful que:
 - ✅ 14 testes E2E passando
 - ⏳ Histórico de transações (futuro)
 
-### 5. ⏳ Pagamento de venda [PENDENTE]
-- Rota POST /payment
-- Recebe valor, país, participantes
-- Simula aprovação imediata (não integrar adquirentes reais)
-- Calcula taxas por país
-- Aplica comissões para cada participante
-- Atualiza transações e saldos
+### 5. ✅ Pagamento de venda [CONCLUÍDO]
+- ✅ Rota POST /payment
+- ✅ Recebe valor, país, participantes
+- ✅ Simula aprovação imediata (não integrar adquirentes reais)
+- ✅ Calcula taxas por país (TRANSACTION e PLATFORM)
+- ✅ Aplica comissões para cada participante (produtor, afiliado, coprodutor, plataforma)
+- ✅ Atualiza transações e saldos automaticamente
+- ✅ 21 testes unitários passando
+- ✅ 8 testes E2E passando
 
 ### 6. ✅ Boas práticas de segurança (LGPD + PCI) [IMPLEMENTADO]
 - ✅ Armazenamento seguro de dados sensíveis (hash bcrypt)

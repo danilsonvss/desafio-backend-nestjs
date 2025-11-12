@@ -6,6 +6,7 @@ export const INJECTION_TOKENS = {
   TAX_REPOSITORY: 'ITaxRepository',
   AFFILIATION_REPOSITORY: 'IAffiliationRepository',
   COPRODUCTION_REPOSITORY: 'ICoproductionRepository',
+  PAYMENT_REPOSITORY: 'IPaymentRepository',
 } as const;
 
 export type InjectionToken = typeof INJECTION_TOKENS[keyof typeof INJECTION_TOKENS];

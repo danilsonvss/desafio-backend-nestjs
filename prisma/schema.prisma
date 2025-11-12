@@ -22,6 +22,12 @@ enum TaxType {
   PLATFORM
 }
 
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -35,6 +41,8 @@ model User {
   affiliateAffiliations   Affiliation[] @relation("AffiliateAffiliations")
   producerCoproductions   Coproduction[] @relation("ProducerCoproductions")
   coproducerCoproductions Coproduction[] @relation("CoproducerCoproductions")
+  producerPayments        Payment[]      @relation("ProducerPayments")
+  affiliatePayments       Payment[]      @relation("AffiliatePayments")
 
   @@map("users")
 }
@@ -88,4 +96,26 @@ model Coproduction {
 
   @@unique([producerId, coproducerId])
   @@map("coproductions")
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  amount            Decimal       @db.Decimal(10, 2)
+  country           String
+  status            PaymentStatus @default(APPROVED)
+  producerId        String
+  affiliateId       String?
+  coproducerId      String?
+  transactionTax    Decimal       @db.Decimal(10, 2)
+  platformTax       Decimal       @db.Decimal(10, 2)
+  producerCommission Decimal      @db.Decimal(10, 2)
+  affiliateCommission Decimal?    @db.Decimal(10, 2)
+  coproducerCommission Decimal?   @db.Decimal(10, 2)
+  platformCommission Decimal      @db.Decimal(10, 2)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  producer          User          @relation("ProducerPayments", fields: [producerId], references: [id], onDelete: Cascade)
+  affiliate         User?         @relation("AffiliatePayments", fields: [affiliateId], references: [id], onDelete: SetNull)
+
+  @@map("payments")
 }
