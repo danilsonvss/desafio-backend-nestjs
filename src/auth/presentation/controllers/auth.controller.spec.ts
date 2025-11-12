@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '../../../shared/domain/enums/user-role.enum';
 import { AuthController } from './auth.controller';
 import { RegisterUserUseCase } from '../../application/use-cases/register-user.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';

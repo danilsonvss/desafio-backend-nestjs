@@ -1,4 +1,4 @@
-import { UserRole } from '@prisma/client';
+import { UserRole } from '../../../shared/domain/enums/user-role.enum';
 import { UserEntity } from './user.entity';
 
 describe('UserEntity', () => {

@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '../../src/shared/domain/enums/user-role.enum';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
@@ -29,13 +29,13 @@ describe('AuthController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany();
-    await prisma.$disconnect();
+    await prisma.client.user.deleteMany();
+    await prisma.onModuleDestroy();
     await app.close();
   });
 
   beforeEach(async () => {
-    await prisma.user.deleteMany();
+    await prisma.client.user.deleteMany();
   });
 
   describe('/auth/register (POST)', () => {
@@ -207,7 +207,7 @@ describe('AuthController (e2e)', () => {
         })
         .expect(201);
 
-      const user = await prisma.user.findUnique({
+      const user = await prisma.client.user.findUnique({
         where: { email: 'hashed@example.com' },
       });
 

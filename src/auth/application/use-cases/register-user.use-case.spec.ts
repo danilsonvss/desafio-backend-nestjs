@@ -1,5 +1,5 @@
 import { ConflictException } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { UserRole } from '../../../shared/domain/enums/user-role.enum';
 import { RegisterUserUseCase } from './register-user.use-case';
 import { UserEntity } from '../../domain/entities/user.entity';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
