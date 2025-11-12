@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ProcessPaymentUseCase } from './process-payment.use-case';
+import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
 import { PaymentEntity } from '../../domain/entities/payment.entity';
 import { TaxEntity } from '../../../tax/domain/entities/tax.entity';
@@ -20,6 +21,7 @@ describe('ProcessPaymentUseCase', () => {
   let affiliationRepository: any;
   let coproductionRepository: any;
   let userRepository: any;
+  let mockPrismaService: any;
 
   const mockProducer = new UserEntity(
     'producer-id',
@@ -67,6 +69,7 @@ describe('ProcessPaymentUseCase', () => {
       findByUserId: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      atomicUpdate: jest.fn(),
     };
 
     affiliationRepository = {
@@ -80,6 +83,12 @@ describe('ProcessPaymentUseCase', () => {
     userRepository = {
       findById: jest.fn(),
       findByRole: jest.fn(),
+    };
+
+    mockPrismaService = {
+      client: {
+        $transaction: jest.fn(),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -108,6 +117,10 @@ describe('ProcessPaymentUseCase', () => {
         {
           provide: INJECTION_TOKENS.USER_REPOSITORY,
           useValue: userRepository,
+        },
+        {
+          provide: PrismaService,
+          useValue: mockPrismaService,
         },
       ],
     }).compile();
@@ -149,17 +162,49 @@ describe('ProcessPaymentUseCase', () => {
         null,
         20,
       );
-      paymentRepository.create.mockResolvedValue(payment);
 
-      balanceRepository.findByUserId.mockResolvedValue(null);
-      balanceRepository.create.mockResolvedValue(BalanceEntity.create('producer-id'));
-      balanceRepository.update.mockResolvedValue(BalanceEntity.create('producer-id'));
+      // Mock da transação do Prisma
+      const mockPrismaPayment = {
+        id: payment.id,
+        amount: payment.amount,
+        country: payment.country,
+        status: payment.status,
+        producerId: payment.producerId,
+        affiliateId: payment.affiliateId,
+        coproducerId: payment.coproducerId,
+        transactionTax: payment.transactionTax,
+        platformTax: payment.platformTax,
+        producerCommission: payment.producerCommission,
+        affiliateCommission: payment.affiliateCommission,
+        coproducerCommission: payment.coproducerCommission,
+        platformCommission: payment.platformCommission,
+        createdAt: payment.createdAt,
+        updatedAt: payment.updatedAt,
+      };
+
+      // Mock do create dentro da transação
+      const mockTxInstance = {
+        payment: {
+          create: jest.fn().mockResolvedValue(mockPrismaPayment),
+        },
+      };
+
+      // Configura o mock da transação para executar o callback com o mockTxInstance
+      mockPrismaService.client.$transaction.mockImplementation(async (callback) => {
+        return await callback(mockTxInstance);
+      });
+
+      // Mock do atomicUpdate
+      balanceRepository.atomicUpdate.mockResolvedValue(
+        BalanceEntity.create('producer-id'),
+      );
 
       const result = await useCase.execute(dto);
 
       expect(result).toBeInstanceOf(PaymentEntity);
       expect(result.status).toBe(PaymentStatus.APPROVED);
       expect(result.producerId).toBe('producer-id');
+      expect(balanceRepository.atomicUpdate).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException for negative amount', async () => {

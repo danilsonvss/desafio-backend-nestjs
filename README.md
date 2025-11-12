@@ -103,6 +103,34 @@ npm run prisma:migrate:deploy
 npm run prisma:studio
 ```
 
+### Seed (Dados de Teste)
+
+O projeto inclui um seed que cria usuários pré-definidos para testes:
+
+- **Produtor**: `produtor@example.com` (senha: `password123`)
+- **Afiliado**: `afiliado@example.com` (senha: `password123`)
+- **Coprodutor**: `coprodutor@example.com` (senha: `password123`)
+- **Plataforma**: `plataforma@example.com` (senha: `password123`)
+
+O seed também cria:
+- Afiliação entre produtor e afiliado (10% de comissão)
+- Coprodução entre produtor e coprodutor (15% de comissão)
+- Taxas de exemplo:
+  - BR - TRANSACTION: 5%
+  - BR - PLATFORM: 2%
+  - US - TRANSACTION: 3%
+  - US - PLATFORM: 2%
+
+```bash
+# Executar seed
+npm run prisma:seed
+
+# Ou usando o comando do Prisma diretamente
+npx prisma db seed
+```
+
+**Nota**: O seed usa `upsert`, então pode ser executado múltiplas vezes sem duplicar dados.
+
 ## 🧪 Testes
 
 ```bash

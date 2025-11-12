@@ -8,7 +8,10 @@ export class ProcessPaymentDto {
   @IsNotEmpty({ message: 'Amount is required' })
   amount: number;
 
-  @ApiProperty({ example: 'BR', description: 'Código do país (ISO 3166-1 alpha-2)' })
+  @ApiProperty({ 
+    example: 'BR', 
+    description: 'Código do país (ISO 3166-1 alpha-2). Suporta vendas nacionais e internacionais. Exemplos: BR (Brasil), US (Estados Unidos), MX (México)' 
+  })
   @IsString()
   @IsNotEmpty({ message: 'Country is required' })
   country: string;

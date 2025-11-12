@@ -35,7 +35,9 @@ export class PaymentController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Processar pagamento',
-    description: 'Processa um pagamento, calcula taxas e comissões, e atualiza os saldos dos participantes automaticamente'
+    description: 'Processa um pagamento, calcula taxas e comissões, e atualiza os saldos dos participantes automaticamente. ' +
+      'Suporta vendas nacionais e internacionais através do campo `country`. ' +
+      'Use os IDs dos usuários de teste criados pelo seed (produtor, afiliado, coprodutor) para testar o fluxo completo.'
   })
   @ApiBody({ type: ProcessPaymentDto })
   @ApiResponse({ status: 201, description: 'Pagamento processado com sucesso', type: PaymentResponseDto })

@@ -8,11 +8,13 @@ O projeto trata-se de uma API RestFull, criada com  NodeJs, TypeScript, NestJs, 
 
 Desenvolver uma API RESTful que:
 
-- Simule a existência de um único produto com um produtor, um coprodutor e afiliado já definidos, apenas para fins de teste do fluxo.
-- Receba dados de vendas nacionais e internacionais;
-- Calcule taxas e comissões conforme regras de negócio;
-- Registre repasses para produtores, afiliados, coprodutores e plataforma;
-- Atualize saldos individuais conforme cada transação.
+- ✅ Simule a existência de um único produto com um produtor, um coprodutor e afiliado já definidos, apenas para fins de teste do fluxo. (Seed file criado: `prisma/seed.ts`)
+- ✅ Receba dados de vendas nacionais e internacionais;
+- ✅ Calcule taxas e comissões conforme regras de negócio;
+- ✅ Registre repasses para produtores, afiliados, coprodutores e plataforma;
+- ✅ Atualize saldos individuais conforme cada transação.
+
+**Status**: Todos os critérios foram totalmente implementados e testados.
 
 ## **🗂️ Arquitetura Implementada**
 

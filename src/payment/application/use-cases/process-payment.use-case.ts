@@ -1,5 +1,6 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
+import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { PaymentEntity } from '../../domain/entities/payment.entity';
 import { BalanceEntity } from '../../../balance/domain/entities/balance.entity';
 import { UserEntity } from '../../../auth/domain/entities/user.entity';
@@ -37,6 +38,7 @@ export class ProcessPaymentUseCase {
     private readonly coproductionRepository: ICoproductionRepository,
     @Inject(INJECTION_TOKENS.USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(dto: ProcessPaymentDto): Promise<PaymentEntity> {
@@ -132,22 +134,60 @@ export class ProcessPaymentUseCase {
       platformCommission,
     );
 
-    const createdPayment = await this.paymentRepository.create(payment);
+    // Busca usuário da plataforma antes da transação (não precisa estar na transação)
+    const platformUser = await this.userRepository.findByRole(UserRole.PLATFORM);
 
-    await this.updateBalances(
-      dto.producerId,
-      dto.affiliateId,
-      dto.coproducerId,
-      producerCommission,
-      affiliateCommission,
-      coproducerCommission,
-      platformCommission,
+    // Usa transação para garantir atomicidade: ou tudo é commitado ou tudo é revertido
+    // Isso garante que se uma atualização de saldo falhar, o pagamento também será revertido
+    return await this.prisma.client.$transaction(
+      async (tx) => {
+        // Cria o pagamento dentro da transação
+        const created = await tx.payment.create({
+          data: {
+            id: payment.id,
+            amount: payment.amount,
+            country: payment.country,
+            status: payment.status,
+            producerId: payment.producerId,
+            affiliateId: payment.affiliateId,
+            coproducerId: payment.coproducerId,
+            transactionTax: payment.transactionTax,
+            platformTax: payment.platformTax,
+            producerCommission: payment.producerCommission,
+            affiliateCommission: payment.affiliateCommission,
+            coproducerCommission: payment.coproducerCommission,
+            platformCommission: payment.platformCommission,
+          },
+        });
+
+        // Atualiza saldos de forma atômica dentro da mesma transação
+        await this.updateBalancesInTransaction(
+          tx,
+          dto.producerId,
+          dto.affiliateId,
+          dto.coproducerId,
+          producerCommission,
+          affiliateCommission,
+          coproducerCommission,
+          platformCommission,
+          platformUser?.id,
+        );
+
+        return PaymentEntity.fromPrisma(created);
+      },
+      {
+        isolationLevel: 'Serializable', // Máximo isolamento para garantir consistência
+        timeout: 10000, // 10 segundos de timeout
+      },
     );
-
-    return createdPayment;
   }
 
-  private async updateBalances(
+  /**
+   * Atualiza saldos de forma atômica dentro de uma transação.
+   * Usa increment atômico no banco de dados para evitar race conditions.
+   */
+  private async updateBalancesInTransaction(
+    tx: any,
     producerId: string,
     affiliateId: string | undefined,
     coproducerId: string | undefined,
@@ -155,48 +195,21 @@ export class ProcessPaymentUseCase {
     affiliateCommission: number | null,
     coproducerCommission: number | null,
     platformCommission: number,
+    platformUserId: string | undefined,
   ): Promise<void> {
-    let producerBalance = await this.balanceRepository.findByUserId(producerId);
-    if (!producerBalance) {
-      producerBalance = await this.balanceRepository.create(
-        BalanceEntity.create(producerId),
-      );
-    }
-    producerBalance = producerBalance.credit(producerCommission);
-    await this.balanceRepository.update(producerBalance);
+    // Atualização atômica do produtor usando increment no banco
+    await this.balanceRepository.atomicUpdate(producerId, producerCommission, tx);
 
     if (affiliateId && affiliateCommission) {
-      let affiliateBalance = await this.balanceRepository.findByUserId(affiliateId);
-      if (!affiliateBalance) {
-        affiliateBalance = await this.balanceRepository.create(
-          BalanceEntity.create(affiliateId),
-        );
-      }
-      affiliateBalance = affiliateBalance.credit(affiliateCommission);
-      await this.balanceRepository.update(affiliateBalance);
+      await this.balanceRepository.atomicUpdate(affiliateId, affiliateCommission, tx);
     }
 
     if (coproducerId && coproducerCommission) {
-      let coproducerBalance = await this.balanceRepository.findByUserId(coproducerId);
-      if (!coproducerBalance) {
-        coproducerBalance = await this.balanceRepository.create(
-          BalanceEntity.create(coproducerId),
-        );
-      }
-      coproducerBalance = coproducerBalance.credit(coproducerCommission);
-      await this.balanceRepository.update(coproducerBalance);
+      await this.balanceRepository.atomicUpdate(coproducerId, coproducerCommission, tx);
     }
 
-    const platformUser = await this.userRepository.findByRole(UserRole.PLATFORM);
-    if (platformUser && platformCommission > 0) {
-      let platformBalance = await this.balanceRepository.findByUserId(platformUser.id);
-      if (!platformBalance) {
-        platformBalance = await this.balanceRepository.create(
-          BalanceEntity.create(platformUser.id),
-        );
-      }
-      platformBalance = platformBalance.credit(platformCommission);
-      await this.balanceRepository.update(platformBalance);
+    if (platformUserId && platformCommission > 0) {
+      await this.balanceRepository.atomicUpdate(platformUserId, platformCommission, tx);
     }
   }
 }

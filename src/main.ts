@@ -18,7 +18,18 @@ async function bootstrap() {
     .setTitle('Desafio Backend NestJS API')
     .setDescription(
       'API RESTful para gerenciamento de pagamentos, taxas, comissões e afiliações. ' +
-      'Desenvolvida com NestJS, Prisma e PostgreSQL seguindo DDD e Clean Architecture.'
+      'Desenvolvida com NestJS, Prisma e PostgreSQL seguindo DDD e Clean Architecture.\n\n' +
+      '## 👤 Usuários de Teste\n\n' +
+      'O projeto inclui um seed que cria usuários pré-definidos para testes:\n\n' +
+      '- **Produtor**: `produtor@example.com` (senha: `password123`)\n' +
+      '- **Afiliado**: `afiliado@example.com` (senha: `password123`)\n' +
+      '- **Coprodutor**: `coprodutor@example.com` (senha: `password123`)\n' +
+      '- **Plataforma**: `plataforma@example.com` (senha: `password123`)\n\n' +
+      'Para criar os usuários de teste, execute: `npm run prisma:seed`\n\n' +
+      'O seed também cria:\n' +
+      '- Afiliação entre produtor e afiliado (10% de comissão)\n' +
+      '- Coprodução entre produtor e coprodutor (15% de comissão)\n' +
+      '- Taxas de exemplo para BR e US'
     )
     .setVersion('1.0')
     .addBearerAuth(

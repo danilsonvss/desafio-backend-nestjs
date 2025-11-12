@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { BalanceEntity } from '../../domain/entities/balance.entity';
 import { IBalanceRepository } from '../../domain/repositories/balance.repository.interface';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaBalanceRepository implements IBalanceRepository {
@@ -53,5 +54,30 @@ export class PrismaBalanceRepository implements IBalanceRepository {
     });
 
     return count > 0;
+  }
+
+  async atomicUpdate(
+    userId: string,
+    amount: number | Prisma.Decimal,
+    tx?: Prisma.TransactionClient,
+  ): Promise<BalanceEntity> {
+    const client = tx || this.prisma.client;
+
+    // Usa upsert para criar se não existir, ou atualizar se existir
+    // O increment é atômico no banco de dados, evitando race conditions
+    const updated = await client.balance.upsert({
+      where: { userId },
+      create: {
+        userId,
+        amount: typeof amount === 'number' ? amount : amount.toNumber(),
+      },
+      update: {
+        amount: {
+          increment: typeof amount === 'number' ? amount : amount.toNumber(),
+        },
+      },
+    });
+
+    return BalanceEntity.fromPrisma(updated);
   }
 }
