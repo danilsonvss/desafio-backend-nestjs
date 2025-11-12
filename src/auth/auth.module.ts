@@ -9,14 +9,7 @@ import { PrismaUserRepository } from './infrastructure/repositories/prisma-user.
 import { BcryptPasswordHashService } from './infrastructure/services/bcrypt-password-hash.service';
 import { NestJwtService } from './infrastructure/services/nestjs-jwt.service';
 import { JwtStrategy } from './presentation/strategies/jwt.strategy';
-import { PrismaService } from '../shared/infrastructure/prisma/prisma.service';
-import type { IUserRepository } from './domain/repositories/user.repository.interface';
-import type { IPasswordHashService } from './domain/services/password-hash.service.interface';
-import type { IJwtService } from './domain/services/jwt.service.interface';
-
-const USER_REPOSITORY_TOKEN = 'IUserRepository';
-const PASSWORD_HASH_SERVICE_TOKEN = 'IPasswordHashService';
-const JWT_SERVICE_TOKEN = 'IJwtService';
+import { INJECTION_TOKENS } from '../shared/constants/injection-tokens';
 
 @Module({
   imports: [
@@ -37,24 +30,23 @@ const JWT_SERVICE_TOKEN = 'IJwtService';
   ],
   controllers: [AuthController],
   providers: [
-    PrismaService,
     {
-      provide: USER_REPOSITORY_TOKEN,
+      provide: INJECTION_TOKENS.USER_REPOSITORY,
       useClass: PrismaUserRepository,
     },
     {
-      provide: PASSWORD_HASH_SERVICE_TOKEN,
+      provide: INJECTION_TOKENS.PASSWORD_HASH_SERVICE,
       useClass: BcryptPasswordHashService,
     },
     {
-      provide: JWT_SERVICE_TOKEN,
+      provide: INJECTION_TOKENS.JWT_SERVICE,
       useClass: NestJwtService,
     },
     RegisterUserUseCase,
     LoginUseCase,
     JwtStrategy,
   ],
-  exports: [USER_REPOSITORY_TOKEN, JwtStrategy, PassportModule],
+  exports: [INJECTION_TOKENS.USER_REPOSITORY, JwtStrategy, PassportModule],
 })
 export class AuthModule {}
 

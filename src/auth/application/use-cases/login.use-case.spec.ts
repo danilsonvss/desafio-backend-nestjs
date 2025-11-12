@@ -1,5 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '../../../shared/domain/enums/user-role.enum';
+import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
 import { LoginUseCase } from './login.use-case';
 import { UserEntity } from '../../domain/entities/user.entity';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
@@ -12,29 +14,46 @@ describe('LoginUseCase', () => {
   let passwordHashService: jest.Mocked<IPasswordHashService>;
   let jwtService: jest.Mocked<IJwtService>;
 
-  beforeEach(() => {
-    userRepository = {
+  beforeEach(async () => {
+    const mockUserRepository = {
       create: jest.fn(),
       findByEmail: jest.fn(),
       findById: jest.fn(),
       existsByEmail: jest.fn(),
     };
 
-    passwordHashService = {
+    const mockPasswordHashService = {
       hash: jest.fn(),
       compare: jest.fn(),
     };
 
-    jwtService = {
+    const mockJwtService = {
       sign: jest.fn(),
       verify: jest.fn(),
     };
 
-    useCase = new LoginUseCase(
-      userRepository,
-      passwordHashService,
-      jwtService,
-    );
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        LoginUseCase,
+        {
+          provide: INJECTION_TOKENS.USER_REPOSITORY,
+          useValue: mockUserRepository,
+        },
+        {
+          provide: INJECTION_TOKENS.PASSWORD_HASH_SERVICE,
+          useValue: mockPasswordHashService,
+        },
+        {
+          provide: INJECTION_TOKENS.JWT_SERVICE,
+          useValue: mockJwtService,
+        },
+      ],
+    }).compile();
+
+    useCase = module.get<LoginUseCase>(LoginUseCase);
+    userRepository = module.get(INJECTION_TOKENS.USER_REPOSITORY);
+    passwordHashService = module.get(INJECTION_TOKENS.PASSWORD_HASH_SERVICE);
+    jwtService = module.get(INJECTION_TOKENS.JWT_SERVICE);
   });
 
   it('should login successfully with valid credentials', async () => {

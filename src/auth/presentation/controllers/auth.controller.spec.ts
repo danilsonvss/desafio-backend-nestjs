@@ -61,12 +61,14 @@ describe('AuthController', () => {
       const result = await controller.register(dto);
 
       expect(registerUserUseCase.execute).toHaveBeenCalledWith(dto);
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
       });
+      expect(result).toHaveProperty('createdAt');
+      expect(result).toHaveProperty('updatedAt');
     });
   });
 
@@ -92,7 +94,16 @@ describe('AuthController', () => {
       const result = await controller.login(dto);
 
       expect(loginUseCase.execute).toHaveBeenCalledWith(dto);
-      expect(result).toEqual(loginResult);
+      expect(result).toHaveProperty('accessToken', loginResult.accessToken);
+      expect(result).toHaveProperty('user');
+      expect(result.user).toMatchObject({
+        id: loginResult.user.id,
+        email: loginResult.user.email,
+        name: loginResult.user.name,
+        role: loginResult.user.role,
+      });
+      expect(result.user).toHaveProperty('createdAt');
+      expect(result.user).toHaveProperty('updatedAt');
     });
   });
 });

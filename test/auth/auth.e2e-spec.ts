@@ -5,6 +5,8 @@ import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { UserRole } from '../../src/shared/domain/enums/user-role.enum';
 
+const getData = (response: any) => response.body.data || response.body;
+
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -50,11 +52,12 @@ describe('AuthController (e2e)', () => {
         })
         .expect(201)
         .expect((res) => {
-          expect(res.body).toHaveProperty('id');
-          expect(res.body.email).toBe('test@example.com');
-          expect(res.body.name).toBe('Test User');
-          expect(res.body.role).toBe(UserRole.PRODUCER);
-          expect(res.body).not.toHaveProperty('password');
+          const data = getData(res);
+          expect(data).toHaveProperty('id');
+          expect(data.email).toBe('test@example.com');
+          expect(data.name).toBe('Test User');
+          expect(data.role).toBe(UserRole.PRODUCER);
+          expect(data).not.toHaveProperty('password');
         });
     });
 
@@ -147,11 +150,12 @@ describe('AuthController (e2e)', () => {
         })
         .expect(200)
         .expect((res) => {
-          expect(res.body).toHaveProperty('accessToken');
-          expect(res.body).toHaveProperty('user');
-          expect(res.body.user.email).toBe('login@example.com');
-          expect(res.body.user.name).toBe('Login User');
-          expect(res.body.user.role).toBe(UserRole.AFFILIATE);
+          const data = getData(res);
+          expect(data).toHaveProperty('accessToken');
+          expect(data).toHaveProperty('user');
+          expect(data.user.email).toBe('login@example.com');
+          expect(data.user.name).toBe('Login User');
+          expect(data.user.role).toBe(UserRole.AFFILIATE);
         });
     });
 
@@ -236,7 +240,8 @@ describe('AuthController (e2e)', () => {
         })
         .expect(200);
 
-      const token = response.body.accessToken;
+      const data = getData(response);
+      const token = data.accessToken;
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
       expect(token.split('.')).toHaveLength(3); // JWT has 3 parts

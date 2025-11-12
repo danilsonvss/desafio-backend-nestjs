@@ -1,5 +1,7 @@
 import { ConflictException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import { UserRole } from '../../../shared/domain/enums/user-role.enum';
+import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
 import { RegisterUserUseCase } from './register-user.use-case';
 import { UserEntity } from '../../domain/entities/user.entity';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
@@ -10,20 +12,36 @@ describe('RegisterUserUseCase', () => {
   let userRepository: jest.Mocked<IUserRepository>;
   let passwordHashService: jest.Mocked<IPasswordHashService>;
 
-  beforeEach(() => {
-    userRepository = {
+  beforeEach(async () => {
+    const mockUserRepository = {
       create: jest.fn(),
       findByEmail: jest.fn(),
       findById: jest.fn(),
       existsByEmail: jest.fn(),
     };
 
-    passwordHashService = {
+    const mockPasswordHashService = {
       hash: jest.fn(),
       compare: jest.fn(),
     };
 
-    useCase = new RegisterUserUseCase(userRepository, passwordHashService);
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        RegisterUserUseCase,
+        {
+          provide: INJECTION_TOKENS.USER_REPOSITORY,
+          useValue: mockUserRepository,
+        },
+        {
+          provide: INJECTION_TOKENS.PASSWORD_HASH_SERVICE,
+          useValue: mockPasswordHashService,
+        },
+      ],
+    }).compile();
+
+    useCase = module.get<RegisterUserUseCase>(RegisterUserUseCase);
+    userRepository = module.get(INJECTION_TOKENS.USER_REPOSITORY);
+    passwordHashService = module.get(INJECTION_TOKENS.PASSWORD_HASH_SERVICE);
   });
 
   it('should register a new user successfully', async () => {
