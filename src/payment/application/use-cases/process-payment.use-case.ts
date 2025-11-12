@@ -2,14 +2,17 @@ import { Injectable, Inject, NotFoundException, BadRequestException } from '@nes
 import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
 import { PaymentEntity } from '../../domain/entities/payment.entity';
 import { BalanceEntity } from '../../../balance/domain/entities/balance.entity';
+import { UserEntity } from '../../../auth/domain/entities/user.entity';
+import { AffiliationEntity } from '../../../affiliation/domain/entities/affiliation.entity';
+import { CoproductionEntity } from '../../../affiliation/domain/entities/coproduction.entity';
 import { TaxType } from '../../../shared/domain/enums/tax-type.enum';
 import { UserRole } from '../../../shared/domain/enums/user-role.enum';
 import type { IPaymentRepository } from '../../domain/repositories/payment.repository.interface';
-import type { ITaxRepository } from '../../tax/domain/repositories/tax.repository.interface';
-import type { IBalanceRepository } from '../../balance/domain/repositories/balance.repository.interface';
-import type { IAffiliationRepository } from '../../affiliation/domain/repositories/affiliation.repository.interface';
-import type { ICoproductionRepository } from '../../affiliation/domain/repositories/coproduction.repository.interface';
-import type { IUserRepository } from '../../auth/domain/repositories/user.repository.interface';
+import type { ITaxRepository } from '../../../tax/domain/repositories/tax.repository.interface';
+import type { IBalanceRepository } from '../../../balance/domain/repositories/balance.repository.interface';
+import type { IAffiliationRepository } from '../../../affiliation/domain/repositories/affiliation.repository.interface';
+import type { ICoproductionRepository } from '../../../affiliation/domain/repositories/coproduction.repository.interface';
+import type { IUserRepository } from '../../../auth/domain/repositories/user.repository.interface';
 
 export interface ProcessPaymentDto {
   amount: number;
@@ -46,7 +49,7 @@ export class ProcessPaymentUseCase {
       throw new NotFoundException(`Producer with id ${dto.producerId} not found`);
     }
 
-    let affiliate = null;
+    let affiliate: UserEntity | null = null;
     if (dto.affiliateId) {
       affiliate = await this.userRepository.findById(dto.affiliateId);
       if (!affiliate) {
@@ -54,7 +57,7 @@ export class ProcessPaymentUseCase {
       }
     }
 
-    let coproducer = null;
+    let coproducer: UserEntity | null = null;
     if (dto.coproducerId) {
       coproducer = await this.userRepository.findById(dto.coproducerId);
       if (!coproducer) {
@@ -80,7 +83,7 @@ export class ProcessPaymentUseCase {
 
     const netAmount = dto.amount - transactionTax;
 
-    let affiliation = null;
+    let affiliation: AffiliationEntity | null = null;
     if (dto.affiliateId) {
       affiliation = await this.affiliationRepository.findByProducerAndAffiliate(
         dto.producerId,
@@ -88,7 +91,7 @@ export class ProcessPaymentUseCase {
       );
     }
 
-    let coproduction = null;
+    let coproduction: CoproductionEntity | null = null;
     if (dto.coproducerId) {
       coproduction = await this.coproductionRepository.findByProducerAndCoproducer(
         dto.producerId,
