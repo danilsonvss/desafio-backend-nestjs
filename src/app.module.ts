@@ -4,6 +4,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { SharedModule } from './shared/shared.module';
 import { HealthModule } from './health/health.module';
+import { BalanceModule } from './balance/balance.module';
 import { HttpExceptionFilter } from './shared/presentation/filters/http-exception.filter';
 import { TransformInterceptor } from './shared/presentation/interceptors/transform.interceptor';
 
@@ -15,6 +16,7 @@ import { TransformInterceptor } from './shared/presentation/interceptors/transfo
     SharedModule,
     HealthModule,
     AuthModule,
+    BalanceModule,
   ],
   providers: [
     {

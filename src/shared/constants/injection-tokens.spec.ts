@@ -21,7 +21,7 @@ describe('INJECTION_TOKENS', () => {
 
   it('should contain exactly 3 tokens', () => {
     const tokenKeys = Object.keys(INJECTION_TOKENS);
-    expect(tokenKeys).toHaveLength(3);
+    expect(tokenKeys).toHaveLength(4);
   });
 });
 
