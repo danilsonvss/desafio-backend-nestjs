@@ -39,10 +39,14 @@ Desenvolver uma API RESTful que:
 - ✅ 48 testes unitários passando
 - ✅ 14 testes E2E passando
 
-### 2. ⏳ Sistema de taxas [PENDENTE]
-- Taxas configuráveis via banco de dados
-- Diferenciação por país (nacional/internacional)
-- Entidade Tax no domínio
+### 2. ✅ Sistema de taxas [CONCLUÍDO]
+- ✅ Taxas configuráveis via banco de dados
+- ✅ Diferenciação por país (código ISO ou nacional/internacional)
+- ✅ Entidade Tax no domínio
+- ✅ Tipos de taxa: TRANSACTION e PLATFORM
+- ✅ CRUD completo de taxas
+- ✅ 49 testes unitários passando
+- ✅ 15 testes E2E passando
 
 ### 3. ⏳ Afiliação e coprodução [PENDENTE]
 - Configuração de percentuais de comissão entre:

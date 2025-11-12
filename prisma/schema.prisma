@@ -17,6 +17,11 @@ enum UserRole {
   PLATFORM
 }
 
+enum TaxType {
+  TRANSACTION
+  PLATFORM
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -39,4 +44,16 @@ model Balance {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("balances")
+}
+
+model Tax {
+  id         String   @id @default(uuid())
+  country    String
+  type       TaxType
+  percentage Decimal  @db.Decimal(5, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([country, type])
+  @@map("taxes")
 }
