@@ -123,28 +123,81 @@ npm run test:watch
 
 ```
 src/
-├── auth/                    # Módulo de autenticação
-│   ├── domain/             # Camada de domínio (DDD)
-│   │   ├── entities/       # Entidades
-│   │   ├── repositories/   # Interfaces de repositórios
-│   │   └── services/       # Interfaces de serviços
-│   ├── application/        # Camada de aplicação
-│   │   └── use-cases/      # Casos de uso
-│   ├── infrastructure/     # Camada de infraestrutura
-│   │   ├── repositories/   # Implementações de repositórios
-│   │   └── services/       # Implementações de serviços
-│   └── presentation/       # Camada de apresentação
-│       ├── controllers/    # Controllers
-│       ├── dto/            # Data Transfer Objects
-│       ├── guards/         # Guards de autenticação
-│       └── strategies/     # Estratégias de autenticação
-├── shared/                 # Código compartilhado
-│   └── infrastructure/     # Infraestrutura compartilhada
-│       └── prisma/         # Prisma Service
-└── main.ts                 # Arquivo principal
+├── main.ts                          # Arquivo principal
+├── app.module.ts                    # Módulo raiz com global filters e interceptors
+│
+├── shared/                          # Módulo compartilhado (Global)
+│   ├── shared.module.ts            # @Global module
+│   ├── constants/
+│   │   └── injection-tokens.ts     # Tokens de injeção centralizados
+│   ├── domain/
+│   │   └── enums/                  # Enums compartilhados
+│   ├── infrastructure/
+│   │   └── prisma/                 # Prisma Service (global)
+│   └── presentation/
+│       ├── filters/
+│       │   └── http-exception.filter.ts  # Tratamento global de erros
+│       └── interceptors/
+│           └── transform.interceptor.ts   # Padronização de respostas
+│
+├── health/                          # Módulo de health check
+│   ├── health.module.ts
+│   └── health.controller.ts        # GET /health
+│
+└── auth/                            # Módulo de autenticação (✅ COMPLETO)
+    ├── auth.module.ts
+    ├── domain/                      # Camada de domínio (DDD)
+    │   ├── entities/
+    │   │   └── user.entity.ts      # Entidade User
+    │   ├── repositories/
+    │   │   └── user.repository.interface.ts
+    │   └── services/
+    │       ├── password-hash.service.interface.ts
+    │       └── jwt.service.interface.ts
+    ├── application/                 # Camada de aplicação
+    │   └── use-cases/
+    │       ├── register-user.use-case.ts
+    │       └── login.use-case.ts
+    ├── infrastructure/              # Camada de infraestrutura
+    │   ├── repositories/
+    │   │   └── prisma-user.repository.ts
+    │   └── services/
+    │       ├── bcrypt-password-hash.service.ts
+    │       └── nestjs-jwt.service.ts
+    └── presentation/                # Camada de apresentação
+        ├── controllers/
+        │   └── auth.controller.ts  # POST /auth/register, /auth/login
+        ├── dto/
+        │   ├── register-user.dto.ts
+        │   ├── login.dto.ts
+        │   └── response/            # DTOs de resposta tipados
+        │       ├── user-response.dto.ts
+        │       └── login-response.dto.ts
+        ├── guards/
+        │   ├── jwt-auth.guard.ts   # Proteção de rotas
+        │   └── roles.guard.ts      # Autorização por role
+        ├── decorators/
+        │   ├── current-user.decorator.ts
+        │   └── roles.decorator.ts
+        └── strategies/
+            └── jwt.strategy.ts     # Passport JWT
 ```
 
 ## 🔐 Autenticação
+
+### Formato de Resposta da API
+
+Todas as respostas da API seguem um formato padronizado:
+
+```json
+{
+  "data": {
+    // Dados reais da resposta
+  },
+  "statusCode": 200,
+  "timestamp": "2025-11-12T20:00:00.000Z"
+}
+```
 
 ### Endpoints
 
@@ -163,6 +216,22 @@ Registra um novo usuário.
 
 **Roles disponíveis:** `PRODUCER`, `AFFILIATE`, `COPRODUCER`, `PLATFORM`
 
+**Response (201):**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "name": "User Name",
+    "role": "PRODUCER",
+    "createdAt": "2025-11-12T20:00:00.000Z",
+    "updatedAt": "2025-11-12T20:00:00.000Z"
+  },
+  "statusCode": 201,
+  "timestamp": "2025-11-12T20:00:00.000Z"
+}
+```
+
 #### POST /auth/login
 Autentica um usuário e retorna um token JWT.
 
@@ -174,29 +243,85 @@ Autentica um usuário e retorna um token JWT.
 }
 ```
 
-**Response:**
+**Response (200):**
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "name": "User Name",
-    "role": "PRODUCER"
-  }
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "name": "User Name",
+      "role": "PRODUCER",
+      "createdAt": "2025-11-12T20:00:00.000Z",
+      "updatedAt": "2025-11-12T20:00:00.000Z"
+    }
+  },
+  "statusCode": 200,
+  "timestamp": "2025-11-12T20:00:00.000Z"
+}
+```
+
+#### GET /health
+Verifica o status da aplicação.
+
+**Response (200):**
+```json
+{
+  "data": {
+    "status": "ok",
+    "timestamp": "2025-11-12T20:00:00.000Z",
+    "uptime": 123.456,
+    "environment": "development"
+  },
+  "statusCode": 200,
+  "timestamp": "2025-11-12T20:00:00.000Z"
 }
 ```
 
 ### Uso do Token
 
-Inclua o token no header das requisições:
+Inclua o token no header das requisições protegidas:
 ```
 Authorization: Bearer <token>
 ```
 
+### Tratamento de Erros
+
+Todos os erros seguem um formato consistente:
+
+```json
+{
+  "statusCode": 400,
+  "timestamp": "2025-11-12T20:00:00.000Z",
+  "path": "/auth/register",
+  "message": "Email already exists",
+  "error": "ConflictException"
+}
+```
+
 ## 📚 Documentação
 
-A documentação das regras de negócio está disponível em `docs/auth-business-rules.md`.
+### Documentos Disponíveis
+
+- **Regras de Negócio - Auth**: `docs/auth-business-rules.md`
+- **Implementação Técnica - Auth**: `docs/auth-module-implementation.md`
+- **Proposta de Refatoração**: `docs/refactoring-proposal.md`
+- **Setup Docker**: `DOCKER_SETUP.md`
+
+### Arquitetura
+
+O projeto segue os princípios de:
+- **DDD (Domain-Driven Design)**: Separação em camadas de domínio, aplicação, infraestrutura e apresentação
+- **Clean Architecture**: Dependências apontam para dentro (domínio não depende de nada)
+- **SOLID**: Inversão de dependências, responsabilidade única, etc.
+- **TDD**: Desenvolvimento orientado a testes
+
+### Cobertura de Testes
+
+- ✅ **Testes Unitários**: 48 testes em 12 suites
+- ✅ **Testes E2E**: 14 testes em 2 suites
+- ✅ **Cobertura**: Todas as camadas testadas
 
 ## 🛠️ Scripts Disponíveis
 

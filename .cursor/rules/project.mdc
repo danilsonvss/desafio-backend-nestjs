@@ -4,7 +4,7 @@ alwaysApply: true
 
 O projeto trata-se de uma API RestFull, criada com  NodeJs, TypeScript, NestJs, Prisma, PostgresSQL e Docker.
 
-# **🎯 Plano de ação global**
+# **🎯 Plano de Ação Global**
 
 Desenvolver uma API RESTful que:
 
@@ -14,46 +14,65 @@ Desenvolver uma API RESTful que:
 - Registre repasses para produtores, afiliados, coprodutores e plataforma;
 - Atualize saldos individuais conforme cada transação.
 
-## **🗂️ Arquitetura Esperada**
+## **🗂️ Arquitetura Implementada**
 
-- Arquitetura Modual
-- DDD
-- TDD
-- Testes de integração
-- Escalabilidade Horizontal
+- ✅ Arquitetura Modular com DDD (Domain-Driven Design)
+- ✅ Clean Architecture (domain, application, infrastructure, presentation)
+- ✅ TDD (Test-Driven Development) - 48 testes unitários + 14 E2E
+- ✅ Testes de integração
+- ✅ Escalabilidade Horizontal
+- ✅ Global Exception Filter
+- ✅ Transform Interceptor para padronização de respostas
+- ✅ SharedModule global para recursos compartilhados
+- ✅ Injeção de dependência com tokens centralizados
 
-## **🧱 Funcionalidades Obrigatórias**
+## **🧱 Funcionalidades - Status**
 
-1. Cadastro e autenticação de usuário 
-    - Criação;
-    - Perfis distintos: produtor, afiliado, coprodutor e plataforma.
+### 1. ✅ Cadastro e autenticação de usuário [CONCLUÍDO]
+- ✅ Criação de usuários
+- ✅ Perfis distintos: produtor, afiliado, coprodutor e plataforma
+- ✅ Autenticação JWT
+- ✅ Guards e decorators para proteção de rotas
+- ✅ Hash de senhas com bcrypt
+- ✅ Response DTOs tipados
+- ✅ Validação completa de dados
+- ✅ 48 testes unitários passando
+- ✅ 14 testes E2E passando
 
-2. Sistema de taxas
-    - Taxas configuráveis via banco de dados;
+### 2. ⏳ Sistema de taxas [PENDENTE]
+- Taxas configuráveis via banco de dados
+- Diferenciação por país (nacional/internacional)
+- Entidade Tax no domínio
 
-3. Afiliação e coprodução
-    - Configuração de percentuais de comissão entre:
-    - Produtor;
-    - Afiliado;
-    - Coprodutor;
-    - Plataforma (também pode reter comissão).
+### 3. ⏳ Afiliação e coprodução [PENDENTE]
+- Configuração de percentuais de comissão entre:
+  - Produtor
+  - Afiliado
+  - Coprodutor
+  - Plataforma (também pode reter comissão)
+- Entidades de relacionamento entre usuários
 
-4. Sistema de balances
-    - Tabela de saldo por usuário;
-    - Toda transação atualiza os saldos conforme os repasses.
+### 4. ⏳ Sistema de balances [PARCIAL]
+- ✅ Tabela de saldo por usuário (schema pronto)
+- ⏳ Operações de crédito/débito
+- ⏳ Atualização de saldos conforme transações
+- ⏳ Histórico de transações
 
-5. Pagamento de venda
-    - Rota POST /payment;
-    - Recebe valor, país, participantes;
-    - Simula aprovação imediata (não integrar adquirentes reais);
-    - Calcula taxas por país;
-    - Aplica comissões para cada participante;
-    - Atualiza transações e saldos.
+### 5. ⏳ Pagamento de venda [PENDENTE]
+- Rota POST /payment
+- Recebe valor, país, participantes
+- Simula aprovação imediata (não integrar adquirentes reais)
+- Calcula taxas por país
+- Aplica comissões para cada participante
+- Atualiza transações e saldos
 
-6. Boas práticas de segurança (LGPD + PCI)
-    - Armazenamento seguro de dados sensíveis (hash/criptografia);
-    - Não persistir dados de cartão ou pessoais sem tratamento adequado;
-    - Controle de acesso conforme papel do usuário.
+### 6. ✅ Boas práticas de segurança (LGPD + PCI) [IMPLEMENTADO]
+- ✅ Armazenamento seguro de dados sensíveis (hash bcrypt)
+- ✅ Senhas nunca retornadas nas respostas
+- ✅ Validação de dados de entrada
+- ✅ Controle de acesso conforme papel do usuário
+- ✅ JWT com secret configurável
+- ✅ Response DTOs que não expõem dados sensíveis
 
 ## **🛠️ Tecnologias Esperadas**
 
