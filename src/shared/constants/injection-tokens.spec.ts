@@ -19,9 +19,9 @@ describe('INJECTION_TOKENS', () => {
     expect(typeof INJECTION_TOKENS).toBe('object');
   });
 
-    it('should contain exactly 5 tokens', () => {
+    it('should contain exactly 7 tokens', () => {
       const tokenKeys = Object.keys(INJECTION_TOKENS);
-      expect(tokenKeys).toHaveLength(5);
+      expect(tokenKeys).toHaveLength(7);
     });
 });
 

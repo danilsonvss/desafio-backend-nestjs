@@ -6,6 +6,7 @@ import { SharedModule } from './shared/shared.module';
 import { HealthModule } from './health/health.module';
 import { BalanceModule } from './balance/balance.module';
 import { TaxModule } from './tax/tax.module';
+import { AffiliationModule } from './affiliation/affiliation.module';
 import { HttpExceptionFilter } from './shared/presentation/filters/http-exception.filter';
 import { TransformInterceptor } from './shared/presentation/interceptors/transform.interceptor';
 
@@ -19,6 +20,7 @@ import { TransformInterceptor } from './shared/presentation/interceptors/transfo
     AuthModule,
     BalanceModule,
     TaxModule,
+    AffiliationModule,
   ],
   providers: [
     {

@@ -31,6 +31,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   balance   Balance?
+  producerAffiliations    Affiliation[] @relation("ProducerAffiliations")
+  affiliateAffiliations   Affiliation[] @relation("AffiliateAffiliations")
+  producerCoproductions   Coproduction[] @relation("ProducerCoproductions")
+  coproducerCoproductions Coproduction[] @relation("CoproducerCoproductions")
 
   @@map("users")
 }
@@ -56,4 +60,32 @@ model Tax {
 
   @@unique([country, type])
   @@map("taxes")
+}
+
+model Affiliation {
+  id         String   @id @default(uuid())
+  producerId String
+  affiliateId String
+  percentage Decimal  @db.Decimal(5, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  producer   User     @relation("ProducerAffiliations", fields: [producerId], references: [id], onDelete: Cascade)
+  affiliate  User     @relation("AffiliateAffiliations", fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@unique([producerId, affiliateId])
+  @@map("affiliations")
+}
+
+model Coproduction {
+  id         String   @id @default(uuid())
+  producerId String
+  coproducerId String
+  percentage Decimal  @db.Decimal(5, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  producer   User     @relation("ProducerCoproductions", fields: [producerId], references: [id], onDelete: Cascade)
+  coproducer User     @relation("CoproducerCoproductions", fields: [coproducerId], references: [id], onDelete: Cascade)
+
+  @@unique([producerId, coproducerId])
+  @@map("coproductions")
 }

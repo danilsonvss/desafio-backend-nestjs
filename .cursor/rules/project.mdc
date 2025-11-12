@@ -48,13 +48,15 @@ Desenvolver uma API RESTful que:
 - ✅ 49 testes unitários passando
 - ✅ 15 testes E2E passando
 
-### 3. ⏳ Afiliação e coprodução [PENDENTE]
-- Configuração de percentuais de comissão entre:
-  - Produtor
-  - Afiliado
-  - Coprodutor
-  - Plataforma (também pode reter comissão)
-- Entidades de relacionamento entre usuários
+### 3. ✅ Afiliação e coprodução [CONCLUÍDO]
+- ✅ Configuração de percentuais de comissão entre:
+  - ✅ Produtor e Afiliado
+  - ✅ Produtor e Coprodutor
+- ✅ Entidades de relacionamento entre usuários
+- ✅ CRUD completo de afiliações e coproduções
+- ✅ 42 testes unitários passando
+- ✅ 12 testes E2E passando
+- ⏳ Plataforma (comissão da plataforma será no Payment Module)
 
 ### 4. ✅ Sistema de balances [CONCLUÍDO]
 - ✅ Tabela de saldo por usuário

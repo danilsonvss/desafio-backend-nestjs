@@ -4,6 +4,8 @@ export const INJECTION_TOKENS = {
   JWT_SERVICE: 'IJwtService',
   BALANCE_REPOSITORY: 'IBalanceRepository',
   TAX_REPOSITORY: 'ITaxRepository',
+  AFFILIATION_REPOSITORY: 'IAffiliationRepository',
+  COPRODUCTION_REPOSITORY: 'ICoproductionRepository',
 } as const;
 
 export type InjectionToken = typeof INJECTION_TOKENS[keyof typeof INJECTION_TOKENS];
