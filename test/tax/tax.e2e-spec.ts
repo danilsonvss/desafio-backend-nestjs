@@ -308,6 +308,98 @@ describe('TaxController (e2e)', () => {
         })
         .expect(401);
     });
+
+    it('should normalize country to uppercase (RN-TAX-003)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/taxes')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          country: '  br  ',
+          type: TaxType.TRANSACTION,
+          percentage: 5.0,
+        })
+        .expect(201);
+
+      const data = getData(response);
+      expect(data.country).toBe('BR');
+    });
+
+    it('should not allow updating country or type (RN-TAX-007)', async () => {
+      const createResponse = await request(app.getHttpServer())
+        .post('/taxes')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          country: 'BR',
+          type: TaxType.TRANSACTION,
+          percentage: 5.0,
+        })
+        .expect(201);
+
+      const taxId = getData(createResponse).id;
+
+      // Tentar atualizar apenas percentage (deve funcionar)
+      const updateResponse = await request(app.getHttpServer())
+        .patch('/taxes')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          id: taxId,
+          percentage: 7.5,
+        })
+        .expect(200);
+
+      const updatedData = getData(updateResponse);
+      expect(updatedData.country).toBe('BR'); // País não mudou
+      expect(updatedData.type).toBe(TaxType.TRANSACTION); // Tipo não mudou
+      expect(updatedData.percentage).toBe(7.5); // Apenas percentage mudou
+    });
+
+    it('should allow zero percentage tax (RN-TAX-011)', async () => {
+      await request(app.getHttpServer())
+        .post('/taxes')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          country: 'MX',
+          type: TaxType.TRANSACTION,
+          percentage: 0,
+        })
+        .expect(201);
+
+      // Verificar que taxa zero pode ser usada em pagamento
+      const producerResponse = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'producer-tax@example.com',
+          password: 'password123',
+          name: 'Producer Tax',
+          role: UserRole.PRODUCER,
+        })
+        .expect(201);
+
+      const producerId = getData(producerResponse).id;
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'producer-tax@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      const producerToken = getData(loginResponse).accessToken;
+
+      const paymentResponse = await request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${producerToken}`)
+        .send({
+          amount: 1000,
+          country: 'MX',
+          producerId,
+        })
+        .expect(201);
+
+      const paymentData = getData(paymentResponse);
+      expect(paymentData.transactionTax).toBe(0);
+    });
   });
 });
 

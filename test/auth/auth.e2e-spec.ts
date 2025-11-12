@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
+import { JwtService } from '@nestjs/jwt';
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { UserRole } from '../../src/shared/domain/enums/user-role.enum';
@@ -10,6 +11,7 @@ const getData = (response: any) => response.body.data || response.body;
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let jwtService: JwtService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -18,6 +20,7 @@ describe('AuthController (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     prisma = moduleFixture.get<PrismaService>(PrismaService);
+    jwtService = moduleFixture.get<JwtService>(JwtService);
 
     app.useGlobalPipes(
       new ValidationPipe({
@@ -245,6 +248,76 @@ describe('AuthController (e2e)', () => {
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
       expect(token.split('.')).toHaveLength(3); // JWT has 3 parts
+    });
+
+    it('should reject token when user is deleted (RN-AUTH-003)', async () => {
+      const registerResponse = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'deleted@example.com',
+          password: 'password123',
+          name: 'Deleted User',
+          role: UserRole.PRODUCER,
+        })
+        .expect(201);
+
+      const loginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'deleted@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      const loginData = getData(loginResponse);
+      const token = loginData.accessToken;
+      const userId = getData(registerResponse).id;
+
+      // Deletar usuário
+      await prisma.client.user.delete({
+        where: { id: userId },
+      });
+
+      // Tentar usar token após deletar usuário
+      return request(app.getHttpServer())
+        .get('/balance')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(401);
+    });
+
+    it('should reject expired token (RN-AUTH-002)', async () => {
+      const registerResponse = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'expired@example.com',
+          password: 'password123',
+          name: 'Expired User',
+          role: UserRole.PRODUCER,
+        })
+        .expect(201);
+
+      const userData = getData(registerResponse);
+
+      // Criar token com expiração de 1 segundo
+      const expiredToken = jwtService.sign(
+        {
+          sub: userData.id,
+          email: userData.email,
+          role: userData.role,
+        },
+        {
+          expiresIn: '1s',
+        },
+      );
+
+      // Aguardar expiração do token
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Tentar usar token expirado
+      return request(app.getHttpServer())
+        .get('/balance')
+        .set('Authorization', `Bearer ${expiredToken}`)
+        .expect(401);
     });
   });
 });

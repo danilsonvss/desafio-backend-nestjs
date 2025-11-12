@@ -177,6 +177,62 @@ describe('CoproductionController (e2e)', () => {
         .get(`/coproductions/producer/${producerId}`)
         .expect(401);
     });
+
+    it('should reject coproduction when producer and coproducer are the same (RN-COP-004)', () => {
+      return request(app.getHttpServer())
+        .post('/coproductions')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          coproducerId: producerId, // Mesmo ID
+          percentage: 15.0,
+        })
+        .expect(400);
+    });
+
+    it('should allow multiple coproducers for same producer (RN-COP-005)', async () => {
+      const secondCoproducerResponse = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'coproducer2@example.com',
+          password: 'password123',
+          name: 'Second Coproducer',
+          role: UserRole.COPRODUCER,
+        })
+        .expect(201);
+
+      const secondCoproducerId = getData(secondCoproducerResponse).id;
+
+      await request(app.getHttpServer())
+        .post('/coproductions')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          coproducerId,
+          percentage: 15.0,
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/coproductions')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          coproducerId: secondCoproducerId,
+          percentage: 20.0,
+        })
+        .expect(201);
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/coproductions/producer/${producerId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const data = getData(listResponse);
+      expect(data.length).toBe(2);
+      expect(data.some((c: any) => c.coproducerId === coproducerId)).toBe(true);
+      expect(data.some((c: any) => c.coproducerId === secondCoproducerId)).toBe(true);
+    });
   });
 });
 

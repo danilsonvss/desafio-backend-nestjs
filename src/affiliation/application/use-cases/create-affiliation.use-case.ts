@@ -1,4 +1,4 @@
-import { Injectable, Inject, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, BadRequestException } from '@nestjs/common';
 import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
 import { AffiliationEntity } from '../../domain/entities/affiliation.entity';
 import type { IAffiliationRepository } from '../../domain/repositories/affiliation.repository.interface';
@@ -17,6 +17,10 @@ export class CreateAffiliationUseCase {
   ) {}
 
   async execute(dto: CreateAffiliationDto): Promise<AffiliationEntity> {
+    if (dto.producerId === dto.affiliateId) {
+      throw new BadRequestException('Producer and affiliate cannot be the same user');
+    }
+
     const exists = await this.affiliationRepository.existsByProducerAndAffiliate(
       dto.producerId,
       dto.affiliateId,

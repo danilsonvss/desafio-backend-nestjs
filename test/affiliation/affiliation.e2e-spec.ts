@@ -177,6 +177,62 @@ describe('AffiliationController (e2e)', () => {
         .get(`/affiliations/producer/${producerId}`)
         .expect(401);
     });
+
+    it('should reject affiliation when producer and affiliate are the same (RN-AFF-004)', () => {
+      return request(app.getHttpServer())
+        .post('/affiliations')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          affiliateId: producerId, // Mesmo ID
+          percentage: 10.0,
+        })
+        .expect(400);
+    });
+
+    it('should allow multiple affiliates for same producer (RN-AFF-005)', async () => {
+      const secondAffiliateResponse = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'affiliate2@example.com',
+          password: 'password123',
+          name: 'Second Affiliate',
+          role: UserRole.AFFILIATE,
+        })
+        .expect(201);
+
+      const secondAffiliateId = getData(secondAffiliateResponse).id;
+
+      await request(app.getHttpServer())
+        .post('/affiliations')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          affiliateId,
+          percentage: 10.0,
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/affiliations')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          affiliateId: secondAffiliateId,
+          percentage: 15.0,
+        })
+        .expect(201);
+
+      const listResponse = await request(app.getHttpServer())
+        .get(`/affiliations/producer/${producerId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      const data = getData(listResponse);
+      expect(data.length).toBe(2);
+      expect(data.some((a: any) => a.affiliateId === affiliateId)).toBe(true);
+      expect(data.some((a: any) => a.affiliateId === secondAffiliateId)).toBe(true);
+    });
   });
 });
 

@@ -1,4 +1,4 @@
-import { Injectable, Inject, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, BadRequestException } from '@nestjs/common';
 import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
 import { CoproductionEntity } from '../../domain/entities/coproduction.entity';
 import type { ICoproductionRepository } from '../../domain/repositories/coproduction.repository.interface';
@@ -17,6 +17,10 @@ export class CreateCoproductionUseCase {
   ) {}
 
   async execute(dto: CreateCoproductionDto): Promise<CoproductionEntity> {
+    if (dto.producerId === dto.coproducerId) {
+      throw new BadRequestException('Producer and coproducer cannot be the same user');
+    }
+
     const exists = await this.coproductionRepository.existsByProducerAndCoproducer(
       dto.producerId,
       dto.coproducerId,

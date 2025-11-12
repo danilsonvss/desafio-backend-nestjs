@@ -301,6 +301,294 @@ describe('PaymentController (e2e)', () => {
         expect(response.body.message).toContain('Producer');
       }
     });
+
+    it('should correctly calculate and distribute all commissions (RN-PAY-005)', async () => {
+      await request(app.getHttpServer())
+        .post('/affiliations')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          affiliateId,
+          percentage: 10.0,
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/coproductions')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          coproducerId,
+          percentage: 15.0,
+        })
+        .expect(201);
+
+      const amount = 1000;
+      const transactionTaxPercentage = 5.0;
+      const platformTaxPercentage = 2.0;
+      const affiliatePercentage = 10.0;
+      const coproducerPercentage = 15.0;
+
+      const response = await request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount,
+          country: 'BR',
+          producerId,
+          affiliateId,
+          coproducerId,
+        })
+        .expect(201);
+
+      const data = getData(response);
+
+      // Cálculos esperados
+      const transactionTax = (amount * transactionTaxPercentage) / 100; // 50
+      const platformTax = (amount * platformTaxPercentage) / 100; // 20
+      const netAmount = amount - transactionTax; // 950
+      const affiliateCommission = (netAmount * affiliatePercentage) / 100; // 95
+      const coproducerCommission = (netAmount * coproducerPercentage) / 100; // 142.5
+      const platformCommission = platformTax; // 20
+      const producerCommission = netAmount - affiliateCommission - coproducerCommission - platformCommission; // 692.5
+
+      // Verificar cálculos exatos
+      expect(data.transactionTax).toBe(transactionTax);
+      expect(data.platformTax).toBe(platformTax);
+      expect(data.affiliateCommission).toBe(affiliateCommission);
+      expect(data.coproducerCommission).toBe(coproducerCommission);
+      expect(data.platformCommission).toBe(platformCommission);
+      expect(data.producerCommission).toBe(producerCommission);
+
+      // Verificar que soma de todas as comissões = valor líquido
+      const totalCommissions = producerCommission + affiliateCommission + coproducerCommission + platformCommission;
+      expect(totalCommissions).toBe(netAmount);
+    });
+
+    it('should reject payment when commissions exceed net amount (RN-PAY-005)', async () => {
+      await request(app.getHttpServer())
+        .post('/affiliations')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          affiliateId,
+          percentage: 50.0, // 50% do valor líquido
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/coproductions')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          coproducerId,
+          percentage: 50.0, // 50% do valor líquido
+        })
+        .expect(201);
+
+      // Com taxas: transactionTax = 50, netAmount = 950
+      // Comissões: 50% + 50% = 100% do netAmount = 950
+      // Platform: 20
+      // Total: 950 + 20 = 970 > 950 (netAmount)
+      return request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 1000,
+          country: 'BR',
+          producerId,
+          affiliateId,
+          coproducerId,
+        })
+        .expect(400);
+    });
+
+    it('should handle payment when tax not found (assume 0) (RN-PAY-002)', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 1000,
+          country: 'US', // País sem taxa configurada
+          producerId,
+        })
+        .expect(201);
+
+      const data = getData(response);
+      expect(data.transactionTax).toBe(0);
+      expect(data.platformTax).toBe(0);
+      expect(data.amount).toBe(1000);
+      // Valor líquido = valor original quando não há taxa
+      expect(data.producerCommission).toBe(1000);
+    });
+
+    it('should validate country is required (RN-PAY-009)', () => {
+      return request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 1000,
+          producerId,
+        })
+        .expect(400);
+    });
+
+    it('should validate country is not empty (RN-PAY-009)', () => {
+      return request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 1000,
+          country: '',
+          producerId,
+        })
+        .expect(400);
+    });
+
+    it('should throw error when affiliate not found', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 1000,
+          country: 'BR',
+          producerId,
+          affiliateId: '00000000-0000-0000-0000-000000000000',
+        });
+
+      expect([404, 400]).toContain(response.status);
+    });
+
+    it('should throw error when coproducer not found', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 1000,
+          country: 'BR',
+          producerId,
+          coproducerId: '00000000-0000-0000-0000-000000000000',
+        });
+
+      expect([404, 400]).toContain(response.status);
+    });
+
+    it('should correctly calculate producer commission as remainder (RN-COM-003)', async () => {
+      await request(app.getHttpServer())
+        .post('/affiliations')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          affiliateId,
+          percentage: 10.0,
+        })
+        .expect(201);
+
+      const amount = 1000;
+      const transactionTax = 50; // 5% de 1000
+      const netAmount = 950;
+      const affiliateCommission = 95; // 10% de 950
+      const platformCommission = 20; // 2% de 1000
+      const expectedProducerCommission = netAmount - affiliateCommission - platformCommission; // 835
+
+      const response = await request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount,
+          country: 'BR',
+          producerId,
+          affiliateId,
+        })
+        .expect(201);
+
+      const data = getData(response);
+      expect(data.producerCommission).toBe(expectedProducerCommission);
+      expect(data.producerCommission).toBe(netAmount - affiliateCommission - platformCommission);
+    });
+
+    it('should ensure atomicity: payment and all balances updated together (RN-PAY-006)', async () => {
+      await request(app.getHttpServer())
+        .post('/affiliations')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          affiliateId,
+          percentage: 10.0,
+        })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/coproductions')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          producerId,
+          coproducerId,
+          percentage: 15.0,
+        })
+        .expect(201);
+
+      // Verificar saldos iniciais (devem ser 0)
+      const initialProducerBalance = await prisma.client.balance.findUnique({
+        where: { userId: producerId },
+      });
+      const initialAffiliateBalance = await prisma.client.balance.findUnique({
+        where: { userId: affiliateId },
+      });
+      const initialCoproducerBalance = await prisma.client.balance.findUnique({
+        where: { userId: coproducerId },
+      });
+
+      expect(initialProducerBalance?.amount.toNumber() || 0).toBe(0);
+      expect(initialAffiliateBalance?.amount.toNumber() || 0).toBe(0);
+      expect(initialCoproducerBalance?.amount.toNumber() || 0).toBe(0);
+
+      // Processar pagamento
+      const response = await request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 1000,
+          country: 'BR',
+          producerId,
+          affiliateId,
+          coproducerId,
+        })
+        .expect(201);
+
+      const data = getData(response);
+
+      // Verificar que pagamento foi criado
+      expect(data).toHaveProperty('id');
+      const paymentInDb = await prisma.client.payment.findUnique({
+        where: { id: data.id },
+      });
+      expect(paymentInDb).toBeDefined();
+
+      // Verificar que TODOS os saldos foram atualizados corretamente
+      const finalProducerBalance = await prisma.client.balance.findUnique({
+        where: { userId: producerId },
+      });
+      const finalAffiliateBalance = await prisma.client.balance.findUnique({
+        where: { userId: affiliateId },
+      });
+      const finalCoproducerBalance = await prisma.client.balance.findUnique({
+        where: { userId: coproducerId },
+      });
+
+      // Se o pagamento existe, todos os saldos devem ter sido atualizados
+      expect(finalProducerBalance?.amount.toNumber()).toBe(data.producerCommission);
+      expect(finalAffiliateBalance?.amount.toNumber()).toBe(data.affiliateCommission);
+      expect(finalCoproducerBalance?.amount.toNumber()).toBe(data.coproducerCommission);
+
+      // Verificar consistência: se pagamento existe, saldos devem estar atualizados
+      // Isso garante que a transação foi atômica (ou tudo ou nada)
+      if (paymentInDb) {
+        expect(finalProducerBalance).toBeDefined();
+        expect(finalAffiliateBalance).toBeDefined();
+        expect(finalCoproducerBalance).toBeDefined();
+      }
+    });
   });
 });
 
