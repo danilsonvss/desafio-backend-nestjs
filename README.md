@@ -121,9 +121,11 @@ npm run test:watch
 
 ## 📁 Estrutura do Projeto
 
+O projeto segue uma arquitetura modular baseada em DDD e Clean Architecture:
+
 ```
 src/
-├── main.ts                          # Arquivo principal
+├── main.ts                          # Arquivo principal com configuração do Swagger
 ├── app.module.ts                    # Módulo raiz com global filters e interceptors
 │
 ├── shared/                          # Módulo compartilhado (Global)
@@ -141,47 +143,44 @@ src/
 │           └── transform.interceptor.ts   # Padronização de respostas
 │
 ├── health/                          # Módulo de health check
-│   ├── health.module.ts
 │   └── health.controller.ts        # GET /health
 │
-└── auth/                            # Módulo de autenticação (✅ COMPLETO)
-    ├── auth.module.ts
-    ├── domain/                      # Camada de domínio (DDD)
-    │   ├── entities/
-    │   │   └── user.entity.ts      # Entidade User
-    │   ├── repositories/
-    │   │   └── user.repository.interface.ts
-    │   └── services/
-    │       ├── password-hash.service.interface.ts
-    │       └── jwt.service.interface.ts
-    ├── application/                 # Camada de aplicação
-    │   └── use-cases/
-    │       ├── register-user.use-case.ts
-    │       └── login.use-case.ts
-    ├── infrastructure/              # Camada de infraestrutura
-    │   ├── repositories/
-    │   │   └── prisma-user.repository.ts
-    │   └── services/
-    │       ├── bcrypt-password-hash.service.ts
-    │       └── nestjs-jwt.service.ts
-    └── presentation/                # Camada de apresentação
-        ├── controllers/
-        │   └── auth.controller.ts  # POST /auth/register, /auth/login
-        ├── dto/
-        │   ├── register-user.dto.ts
-        │   ├── login.dto.ts
-        │   └── response/            # DTOs de resposta tipados
-        │       ├── user-response.dto.ts
-        │       └── login-response.dto.ts
-        ├── guards/
-        │   ├── jwt-auth.guard.ts   # Proteção de rotas
-        │   └── roles.guard.ts      # Autorização por role
-        ├── decorators/
-        │   ├── current-user.decorator.ts
-        │   └── roles.decorator.ts
-        └── strategies/
-            └── jwt.strategy.ts     # Passport JWT
+├── auth/                            # Módulo de autenticação ✅
+│   ├── domain/                      # Entities, Repositories, Services
+│   ├── application/                 # Use Cases
+│   ├── infrastructure/              # Implementações Prisma
+│   └── presentation/                # Controllers, DTOs, Guards
+│
+├── balance/                         # Módulo de saldos ✅
+│   ├── domain/
+│   ├── application/
+│   ├── infrastructure/
+│   └── presentation/
+│
+├── tax/                             # Módulo de taxas ✅
+│   ├── domain/
+│   ├── application/
+│   ├── infrastructure/
+│   └── presentation/
+│
+├── affiliation/                     # Módulo de afiliação e coprodução ✅
+│   ├── domain/
+│   ├── application/
+│   ├── infrastructure/
+│   └── presentation/
+│
+└── payment/                         # Módulo de pagamentos ✅
+    ├── domain/
+    ├── application/
+    ├── infrastructure/
+    └── presentation/
 ```
+
+Cada módulo segue a estrutura DDD com 4 camadas:
+- **Domain**: Entidades e interfaces (regras de negócio)
+- **Application**: Use Cases (orquestração)
+- **Infrastructure**: Implementações (Prisma, serviços externos)
+- **Presentation**: Controllers, DTOs, Guards (HTTP)
 
 ## 🔐 Autenticação
 
@@ -312,11 +311,13 @@ A documentação interativa da API está disponível através do Swagger UI:
 
 ### Documentos Disponíveis
 
-- **📋 Regras de Negócio**: `docs/BUSINESS_RULES.md` - Documentação completa de todas as regras de negócio
-- **🏗️ Arquitetura**: `docs/ARCHITECTURE.md` - Documentação da arquitetura do sistema
-- **💰 Balance Module**: `docs/balance-module-implementation.md` - Documentação técnica do módulo de saldos
-- **💳 Tax Module**: Implementação completa de taxas (documentação em `docs/BUSINESS_RULES.md`)
-- **🔄 Proposta de Refatoração**: `docs/refactoring-proposal.md` - Análise e refatorações aplicadas
+- **📋 Regras de Negócio**: `docs/BUSINESS_RULES.md` - Índice centralizado de todas as regras de negócio
+  - `docs/business-rules/AUTH.md` - Autenticação e usuários
+  - `docs/business-rules/BALANCE.md` - Gerenciamento de saldos
+  - `docs/business-rules/TAX.md` - Configuração e cálculo de taxas
+  - `docs/business-rules/AFFILIATION.md` - Afiliação e coprodução
+  - `docs/business-rules/PAYMENT.md` - Processamento de pagamentos
+- **🏗️ Arquitetura**: `docs/ARCHITECTURE.md` - Documentação completa da arquitetura do sistema
 
 ### Arquitetura
 
@@ -326,17 +327,26 @@ O projeto segue os princípios de:
 - **SOLID**: Inversão de dependências, responsabilidade única, etc.
 - **TDD**: Desenvolvimento orientado a testes
 
+### Status do Projeto
+
+✅ **Todos os módulos principais implementados e testados**
+
+- ✅ **Autenticação**: Cadastro, login, JWT, guards e decorators
+- ✅ **Saldos**: Operações de crédito/débito, validações, criação automática
+- ✅ **Taxas**: CRUD completo, cálculo por país e tipo, normalização
+- ✅ **Afiliação e Coprodução**: Relacionamentos entre produtores, afiliados e coprodutores
+- ✅ **Pagamentos**: Processamento completo com cálculo automático de taxas e comissões
+- ✅ **Swagger**: Documentação interativa completa de todos os endpoints
+
 ### Regras de Negócio
 
-Todas as regras de negócio estão documentadas em `docs/BUSINESS_RULES.md`, incluindo:
+Todas as regras de negócio estão documentadas em `docs/BUSINESS_RULES.md` e organizadas por módulo:
 
-- 🔐 **Autenticação e Autorização**: JWT, validação de tokens, controle de acesso
-- 👤 **Usuários**: Cadastro, login, validações, hash de senhas
-- 💰 **Saldos**: Operações de crédito/débito, validações, regras de saldo
-- 💳 **Taxas**: Criação, atualização, cálculo, tipos de taxa
-- 💸 **Pagamentos**: Fluxo de pagamento, cálculo de taxas, distribuição de comissões
-- 💵 **Comissões**: Distribuição automática de comissões entre participantes
-- 🤝 **Afiliação**: Relacionamentos entre produtores, afiliados e coprodutores
+- 🔐 **Autenticação e Usuários** (`docs/business-rules/AUTH.md`): JWT, cadastro, login, segurança
+- 💰 **Saldos** (`docs/business-rules/BALANCE.md`): Operações, validações, regras de saldo
+- 💳 **Taxas** (`docs/business-rules/TAX.md`): Criação, atualização, cálculo, tipos
+- 🤝 **Afiliação e Coprodução** (`docs/business-rules/AFFILIATION.md`): Relacionamentos e comissões
+- 💸 **Pagamentos** (`docs/business-rules/PAYMENT.md`): Processamento, taxas, comissões, distribuição
 
 ### Cobertura de Testes
 
