@@ -3,3 +3,4 @@ export interface IPasswordHashService {
   compare(password: string, hash: string): Promise<boolean>;
 }
 
+
