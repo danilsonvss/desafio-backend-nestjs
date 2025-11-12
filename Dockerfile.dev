@@ -1,0 +1,28 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files and scripts (needed for postinstall)
+COPY package*.json ./
+COPY scripts ./scripts/
+
+# Install dependencies
+RUN npm install
+
+# Copy Prisma schema
+COPY prisma ./prisma/
+
+# Clean any existing Prisma Client and generate
+RUN rm -rf node_modules/.prisma node_modules/@prisma/client/.prisma 2>/dev/null || true
+RUN npx prisma generate
+RUN node scripts/postinstall.js
+
+# Copy source code
+COPY . .
+
+# Expose port
+EXPOSE 3000
+
+# Start in development mode
+CMD ["npm", "run", "start:dev"]
+

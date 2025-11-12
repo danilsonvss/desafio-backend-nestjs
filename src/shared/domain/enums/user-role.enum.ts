@@ -1,0 +1,7 @@
+export enum UserRole {
+  PRODUCER = 'PRODUCER',
+  AFFILIATE = 'AFFILIATE',
+  COPRODUCER = 'COPRODUCER',
+  PLATFORM = 'PLATFORM',
+}
+
