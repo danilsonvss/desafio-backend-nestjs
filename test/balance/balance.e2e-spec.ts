@@ -43,27 +43,42 @@ describe('BalanceController (e2e)', () => {
     await prisma.client.balance.deleteMany();
     await prisma.client.user.deleteMany();
 
-    await request(app.getHttpServer())
+    const registerResponse = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
         email: 'balance@example.com',
         password: 'password123',
         name: 'Balance User',
         role: UserRole.PRODUCER,
-      })
-      .expect(201);
+      });
+
+    if (registerResponse.status !== 201) {
+      throw new Error(`Failed to register user: ${JSON.stringify(registerResponse.body)}`);
+    }
 
     const loginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
         email: 'balance@example.com',
         password: 'password123',
-      })
-      .expect(200);
+      });
+
+    if (loginResponse.status !== 200) {
+      throw new Error(`Failed to login: ${JSON.stringify(loginResponse.body)}`);
+    }
 
     const loginData = getData(loginResponse);
+    
+    if (!loginData || !loginData.accessToken) {
+      throw new Error(`Invalid login response: ${JSON.stringify(loginData)}`);
+    }
+
     authToken = loginData.accessToken;
     userId = loginData.user.id;
+
+    if (!authToken || !userId) {
+      throw new Error(`Token or userId not set. Token: ${authToken}, UserId: ${userId}`);
+    }
   });
 
   describe('/balance (GET)', () => {
