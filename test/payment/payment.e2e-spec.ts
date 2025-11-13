@@ -589,6 +589,96 @@ describe('PaymentController (e2e)', () => {
         expect(finalCoproducerBalance).toBeDefined();
       }
     });
+
+    it('should reject payment when user tries to process for another producer', async () => {
+      // Criar outro produtor
+      const otherProducerResponse = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'other-producer@example.com',
+          password: 'password123',
+          name: 'Other Producer',
+          role: UserRole.PRODUCER,
+        })
+        .expect(201);
+
+      const otherProducerId = getData(otherProducerResponse).id;
+
+      // Tentar processar pagamento para outro produtor (deve falhar)
+      return request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 1000,
+          country: 'BR',
+          producerId: otherProducerId, // Tentando processar para outro produtor
+        })
+        .expect(403);
+    });
+
+    it('should allow platform user to process payment for any producer', async () => {
+      const platformLoginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'platform@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      const platformToken = getData(platformLoginResponse).accessToken;
+
+      // Plataforma pode processar pagamento para qualquer produtor
+      const response = await request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${platformToken}`)
+        .send({
+          amount: 1000,
+          country: 'BR',
+          producerId, // Processando para o produtor criado no beforeEach
+        })
+        .expect(201);
+
+      const data = getData(response);
+      expect(data.producerId).toBe(producerId);
+    });
+
+    it('should reject payment when amount exceeds maximum', () => {
+      return request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 1000001, // Excede o máximo de 1 milhão
+          country: 'BR',
+          producerId,
+        })
+        .expect(400);
+    });
+
+    it('should enforce rate limiting on payment endpoint', async () => {
+      // Fazer 5 requisições (limite permitido)
+      for (let i = 0; i < 5; i++) {
+        await request(app.getHttpServer())
+          .post('/payment')
+          .set('Authorization', `Bearer ${authToken}`)
+          .send({
+            amount: 100,
+            country: 'BR',
+            producerId,
+          })
+          .expect(201);
+      }
+
+      // A 6ª requisição deve ser bloqueada
+      return request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          amount: 100,
+          country: 'BR',
+          producerId,
+        })
+        .expect(429); // Too Many Requests
+    });
   });
 });
 

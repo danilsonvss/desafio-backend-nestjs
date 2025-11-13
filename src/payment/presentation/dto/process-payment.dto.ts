@@ -1,10 +1,18 @@
-import { IsNumber, IsString, IsNotEmpty, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsNumber, IsString, IsNotEmpty, IsOptional, IsUUID, Min, Max } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
+const MAX_PAYMENT_AMOUNT = 1000000; // 1 milhão
+
 export class ProcessPaymentDto {
-  @ApiProperty({ example: 1000.00, description: 'Valor do pagamento (mínimo 0.01)', minimum: 0.01 })
+  @ApiProperty({ 
+    example: 1000.00, 
+    description: `Valor do pagamento (mínimo 0.01, máximo ${MAX_PAYMENT_AMOUNT.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})`, 
+    minimum: 0.01,
+    maximum: MAX_PAYMENT_AMOUNT
+  })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01, { message: 'Amount must be at least 0.01' })
+  @Max(MAX_PAYMENT_AMOUNT, { message: `Amount must not exceed ${MAX_PAYMENT_AMOUNT.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` })
   @IsNotEmpty({ message: 'Amount is required' })
   amount: number;
 
