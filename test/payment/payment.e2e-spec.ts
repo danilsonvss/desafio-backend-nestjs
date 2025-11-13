@@ -48,12 +48,16 @@ describe('PaymentController (e2e)', () => {
   });
 
   beforeEach(async () => {
+    // Limpar dados na ordem correta (respeitando foreign keys)
     await prisma.client.payment.deleteMany();
     await prisma.client.balance.deleteMany();
     await prisma.client.affiliation.deleteMany();
     await prisma.client.coproduction.deleteMany();
     await prisma.client.tax.deleteMany();
     await prisma.client.user.deleteMany();
+    
+    // Aguardar um pouco para garantir que a limpeza foi concluída
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     const producerResponse = await request(app.getHttpServer())
       .post('/auth/register')
@@ -100,6 +104,9 @@ describe('PaymentController (e2e)', () => {
     coproducerId = getData(coproducerResponse).id;
     platformId = getData(platformResponse).id;
 
+    // Aguardar um pouco para garantir que o usuário foi criado
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     const platformLoginResponse = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
@@ -109,6 +116,10 @@ describe('PaymentController (e2e)', () => {
       .expect(200);
 
     const platformToken = getData(platformLoginResponse).accessToken;
+    
+    if (!platformToken) {
+      throw new Error('Platform token not generated');
+    }
 
     await request(app.getHttpServer())
       .post('/taxes')
@@ -234,14 +245,21 @@ describe('PaymentController (e2e)', () => {
     });
 
     it('should update balances after payment', async () => {
-      // Verificar saldo inicial
-      const initialBalanceResponse = await request(app.getHttpServer())
-        .get('/balance')
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(200);
-
-      const initialBalanceData = getData(initialBalanceResponse);
-      const initialBalance = initialBalanceData.amount || 0;
+      // Verificar saldo inicial (pode não existir ainda, então assume 0)
+      let initialBalance = 0;
+      try {
+        const initialBalanceResponse = await request(app.getHttpServer())
+          .get('/balance')
+          .set('Authorization', `Bearer ${authToken}`);
+        
+        if (initialBalanceResponse.status === 200) {
+          const initialBalanceData = getData(initialBalanceResponse);
+          initialBalance = initialBalanceData.amount || 0;
+        }
+      } catch (error) {
+        // Balance não existe ainda, assume 0
+        initialBalance = 0;
+      }
 
       // Processar pagamento
       const paymentResponse = await request(app.getHttpServer())

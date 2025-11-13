@@ -41,6 +41,9 @@ describe('AuthController (e2e)', () => {
 
   beforeEach(async () => {
     await prisma.client.user.deleteMany();
+    
+    // Aguardar um pouco para garantir que a limpeza foi concluída
+    await new Promise((resolve) => setTimeout(resolve, 50));
   });
 
   describe('/auth/register (POST)', () => {

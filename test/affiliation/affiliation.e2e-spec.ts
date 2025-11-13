@@ -43,6 +43,9 @@ describe('AffiliationController (e2e)', () => {
   beforeEach(async () => {
     await prisma.client.affiliation.deleteMany();
     await prisma.client.user.deleteMany();
+    
+    // Aguardar um pouco para garantir que a limpeza foi concluída
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     const producerResponse = await request(app.getHttpServer())
       .post('/auth/register')

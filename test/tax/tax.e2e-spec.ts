@@ -42,6 +42,9 @@ describe('TaxController (e2e)', () => {
   beforeEach(async () => {
     await prisma.client.tax.deleteMany();
     await prisma.client.user.deleteMany();
+    
+    // Aguardar um pouco para garantir que a limpeza foi concluída
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     await request(app.getHttpServer())
       .post('/auth/register')
