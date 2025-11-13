@@ -88,6 +88,35 @@ npm run build
 npm run start:prod
 ```
 
+## ⚙️ Configuração
+
+### Variáveis de Ambiente
+
+As principais variáveis de ambiente configuráveis são:
+
+- `TZ` - Timezone dos containers (padrão: `America/Sao_Paulo`)
+- `POSTGRES_USER` - Usuário do PostgreSQL (padrão: `postgres`)
+- `POSTGRES_PASSWORD` - Senha do PostgreSQL (padrão: `postgres`)
+- `POSTGRES_DB` - Nome do banco de dados (padrão: `desafio_db`)
+- `POSTGRES_PORT` - Porta do PostgreSQL (padrão: `5432`)
+- `PORT` - Porta da aplicação (padrão: `3000`)
+- `JWT_SECRET` - Chave secreta para JWT
+- `JWT_EXPIRES_IN` - Tempo de expiração do token JWT (padrão: `7d`)
+- `DATABASE_URL` - URL de conexão com o banco de dados
+
+### Timezone
+
+O timezone padrão dos containers é configurado para `America/Sao_Paulo`. Para alterar, defina a variável `TZ` no arquivo `.env`:
+
+```bash
+TZ=America/Sao_Paulo
+```
+
+Outros exemplos de timezones:
+- `America/New_York` - Horário de Nova York
+- `Europe/London` - Horário de Londres
+- `UTC` - Tempo Universal Coordenado
+
 ## 🗄️ Banco de Dados
 
 ### Migrações
