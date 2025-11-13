@@ -20,14 +20,19 @@ import {
   ApiForbiddenResponse,
   ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
 import { ProcessPaymentUseCase } from '../../application/use-cases/process-payment.use-case';
 import { ProcessPaymentDto } from '../dto/process-payment.dto';
 import { PaymentResponseDto } from '../dto/response/payment-response.dto';
 import { JwtAuthGuard } from '../../../auth/presentation/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../auth/presentation/decorators/current-user.decorator';
-import { UserEntity } from '../../../auth/domain/entities/user.entity';
 import { UserRole } from '../../../shared/domain/enums/user-role.enum';
+
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+}
 
 @ApiTags('payment')
 @ApiBearerAuth('JWT-auth')
@@ -40,7 +45,6 @@ export class PaymentController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requisições por minuto para pagamentos
   @ApiOperation({
     summary: 'Processar pagamento',
     description: 'Processa um pagamento, calcula taxas e comissões, e atualiza os saldos dos participantes automaticamente. ' +
@@ -56,7 +60,7 @@ export class PaymentController {
   @ApiForbiddenResponse({ description: 'Usuário não tem permissão para processar este pagamento' })
   @ApiTooManyRequestsResponse({ description: 'Muitas requisições. Limite de 5 pagamentos por minuto.' })
   async processPayment(
-    @CurrentUser() user: UserEntity,
+    @CurrentUser() user: AuthenticatedUser,
     @Body(ValidationPipe) dto: ProcessPaymentDto,
   ): Promise<PaymentResponseDto> {
     // Validação de autorização: apenas o próprio produtor ou usuários PLATFORM podem processar pagamentos

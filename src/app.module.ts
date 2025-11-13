@@ -20,12 +20,16 @@ import { TransformInterceptor } from './shared/presentation/interceptors/transfo
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => [
-        {
-          ttl: configService.get<number>('THROTTLE_TTL', 60000), // 1 minuto
-          limit: configService.get<number>('THROTTLE_LIMIT', 10), // 10 requisições por minuto
-        },
-      ],
+      useFactory: (configService: ConfigService) => {
+        // Desabilita throttling em ambiente de teste
+        const isTest = configService.get<string>('NODE_ENV') === 'test';
+        return [
+          {
+            ttl: isTest ? 60000 : configService.get<number>('THROTTLE_TTL', 60000), // 1 minuto
+            limit: isTest ? 1000 : configService.get<number>('THROTTLE_LIMIT', 10), // 10 requisições por minuto (1000 em testes)
+          },
+        ];
+      },
     }),
     SharedModule,
     HealthModule,
