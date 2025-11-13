@@ -14,6 +14,7 @@ export class PrismaPaymentRepository implements IPaymentRepository {
         amount: payment.amount,
         country: payment.country,
         status: payment.status,
+        buyerId: payment.buyerId,
         producerId: payment.producerId,
         affiliateId: payment.affiliateId,
         coproducerId: payment.coproducerId,

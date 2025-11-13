@@ -150,10 +150,27 @@ describe('PaymentController (e2e)', () => {
       .expect(200);
 
     authToken = getData(loginResponse).accessToken;
+
+    // Criar saldo inicial para o comprador (produtor) para poder fazer pagamentos
+    await request(app.getHttpServer())
+      .patch('/balance')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        amount: 10000,
+        operation: 'credit',
+      })
+      .expect(200);
   });
 
   describe('POST /payment', () => {
     it('should process payment with producer only', async () => {
+      // Verificar saldo inicial
+      const initialBalanceResponse = await request(app.getHttpServer())
+        .get('/balance')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+      const initialBalance = getData(initialBalanceResponse).amount;
+
       const response = await request(app.getHttpServer())
         .post('/payment')
         .set('Authorization', `Bearer ${authToken}`)
@@ -168,6 +185,7 @@ describe('PaymentController (e2e)', () => {
       expect(data).toHaveProperty('id');
       expect(data.amount).toBe(1000);
       expect(data.country).toBe('BR');
+      expect(data.buyerId).toBe(producerId); // O comprador é o usuário autenticado
       expect(data.producerId).toBe(producerId);
       expect(data.affiliateId).toBeNull();
       expect(data.coproducerId).toBeNull();
@@ -175,6 +193,16 @@ describe('PaymentController (e2e)', () => {
       expect(data.platformTax).toBe(20);
       expect(data.producerCommission).toBeGreaterThan(0);
       expect(data.platformCommission).toBe(20);
+
+      // Verificar que o saldo do comprador foi debitado e depois creditado com a comissão
+      // Como o comprador é o produtor, o saldo final será: inicial - amount + producerCommission
+      const finalBalanceResponse = await request(app.getHttpServer())
+        .get('/balance')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+      const finalBalance = getData(finalBalanceResponse).amount;
+      const expectedBalance = initialBalance - 1000 + data.producerCommission;
+      expect(finalBalance).toBeCloseTo(expectedBalance, 2);
     });
 
     it('should process payment with producer and affiliate', async () => {
@@ -245,21 +273,12 @@ describe('PaymentController (e2e)', () => {
     });
 
     it('should update balances after payment', async () => {
-      // Verificar saldo inicial (pode não existir ainda, então assume 0)
-      let initialBalance = 0;
-      try {
-        const initialBalanceResponse = await request(app.getHttpServer())
-          .get('/balance')
-          .set('Authorization', `Bearer ${authToken}`);
-        
-        if (initialBalanceResponse.status === 200) {
-          const initialBalanceData = getData(initialBalanceResponse);
-          initialBalance = initialBalanceData.amount || 0;
-        }
-      } catch (error) {
-        // Balance não existe ainda, assume 0
-        initialBalance = 0;
-      }
+      // Verificar saldo inicial do comprador
+      const initialBalanceResponse = await request(app.getHttpServer())
+        .get('/balance')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+      const initialBuyerBalance = getData(initialBalanceResponse).amount;
 
       // Processar pagamento
       const paymentResponse = await request(app.getHttpServer())
@@ -274,15 +293,57 @@ describe('PaymentController (e2e)', () => {
 
       const paymentData = getData(paymentResponse);
 
-      // Verificar saldo após pagamento (deve ser incrementado)
-      const balanceResponse = await request(app.getHttpServer())
+      // Verificar saldo do comprador após pagamento (deve ser debitado)
+      const buyerBalanceResponse = await request(app.getHttpServer())
         .get('/balance')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      const balanceData = getData(balanceResponse);
-      expect(balanceData.amount).toBe(initialBalance + paymentData.producerCommission);
-      expect(balanceData.amount).toBeGreaterThan(initialBalance);
+      const buyerBalanceData = getData(buyerBalanceResponse);
+      // O saldo do comprador deve ser debitado do valor do pagamento
+      // Mas depois recebe a comissão do produtor (se for o mesmo usuário)
+      // Como o comprador é o produtor neste caso, o saldo final será:
+      // inicial - amount + producerCommission
+      const expectedBalance = initialBuyerBalance - 1000 + paymentData.producerCommission;
+      expect(buyerBalanceData.amount).toBeCloseTo(expectedBalance, 2);
+    });
+
+    it('should reject payment when buyer has insufficient balance', async () => {
+      // Criar um novo usuário sem saldo
+      const newUserResponse = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
+          email: 'buyer@example.com',
+          password: 'password123',
+          name: 'Buyer User',
+          role: UserRole.PRODUCER,
+        })
+        .expect(201);
+
+      const newUserId = getData(newUserResponse).id;
+
+      const newUserLoginResponse = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'buyer@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      const newUserToken = getData(newUserLoginResponse).accessToken;
+
+      // Tentar fazer um pagamento sem saldo
+      const response = await request(app.getHttpServer())
+        .post('/payment')
+        .set('Authorization', `Bearer ${newUserToken}`)
+        .send({
+          amount: 1000,
+          country: 'BR',
+          producerId: newUserId,
+        })
+        .expect(422); // UnprocessableEntityException
+
+      expect(response.body.message).toContain('Insufficient balance');
     });
 
     it('should validate amount is positive', () => {
@@ -560,10 +621,14 @@ describe('PaymentController (e2e)', () => {
         })
         .expect(201);
 
-      // Verificar saldos iniciais (devem ser 0)
-      const initialProducerBalance = await prisma.client.balance.findUnique({
-        where: { userId: producerId },
-      });
+      // Verificar saldo inicial do comprador (produtor) - já tem saldo do beforeEach
+      const initialBuyerBalanceResponse = await request(app.getHttpServer())
+        .get('/balance')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+      const initialBuyerBalance = getData(initialBuyerBalanceResponse).amount;
+
+      // Verificar saldos iniciais dos outros participantes (devem ser 0 ou não existir)
       const initialAffiliateBalance = await prisma.client.balance.findUnique({
         where: { userId: affiliateId },
       });
@@ -571,7 +636,6 @@ describe('PaymentController (e2e)', () => {
         where: { userId: coproducerId },
       });
 
-      expect(initialProducerBalance?.amount.toNumber() || 0).toBe(0);
       expect(initialAffiliateBalance?.amount.toNumber() || 0).toBe(0);
       expect(initialCoproducerBalance?.amount.toNumber() || 0).toBe(0);
 
@@ -598,9 +662,15 @@ describe('PaymentController (e2e)', () => {
       expect(paymentInDb).toBeDefined();
 
       // Verificar que TODOS os saldos foram atualizados corretamente
-      const finalProducerBalance = await prisma.client.balance.findUnique({
-        where: { userId: producerId },
-      });
+      // O comprador (produtor) teve o saldo debitado e depois creditado com a comissão
+      const finalBuyerBalanceResponse = await request(app.getHttpServer())
+        .get('/balance')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+      const finalBuyerBalance = getData(finalBuyerBalanceResponse).amount;
+      const expectedBuyerBalance = initialBuyerBalance - 1000 + data.producerCommission;
+      expect(finalBuyerBalance).toBeCloseTo(expectedBuyerBalance, 2);
+
       const finalAffiliateBalance = await prisma.client.balance.findUnique({
         where: { userId: affiliateId },
       });
@@ -608,20 +678,14 @@ describe('PaymentController (e2e)', () => {
         where: { userId: coproducerId },
       });
 
-      // Se o pagamento existe, todos os saldos devem ter sido atualizados
-      // O saldo é incrementado, então deve ser o saldo inicial + comissão
-      const initialProducerAmount = initialProducerBalance?.amount.toNumber() || 0;
-      const initialAffiliateAmount = initialAffiliateBalance?.amount.toNumber() || 0;
-      const initialCoproducerAmount = initialCoproducerBalance?.amount.toNumber() || 0;
-
-      expect(finalProducerBalance?.amount.toNumber()).toBe(initialProducerAmount + data.producerCommission);
-      expect(finalAffiliateBalance?.amount.toNumber()).toBe(initialAffiliateAmount + data.affiliateCommission);
-      expect(finalCoproducerBalance?.amount.toNumber()).toBe(initialCoproducerAmount + data.coproducerCommission);
+      // Verificar que os saldos dos participantes foram creditados
+      expect(finalAffiliateBalance?.amount.toNumber() || 0).toBe(data.affiliateCommission);
+      expect(finalCoproducerBalance?.amount.toNumber() || 0).toBe(data.coproducerCommission);
 
       // Verificar consistência: se pagamento existe, saldos devem estar atualizados
       // Isso garante que a transação foi atômica (ou tudo ou nada)
       if (paymentInDb) {
-        expect(finalProducerBalance).toBeDefined();
+        expect(finalBuyerBalance).toBeGreaterThan(0);
         expect(finalAffiliateBalance).toBeDefined();
         expect(finalCoproducerBalance).toBeDefined();
       }
@@ -664,6 +728,16 @@ describe('PaymentController (e2e)', () => {
 
       const platformToken = getData(platformLoginResponse).accessToken;
 
+      // Criar saldo para o usuário da plataforma (comprador)
+      await request(app.getHttpServer())
+        .patch('/balance')
+        .set('Authorization', `Bearer ${platformToken}`)
+        .send({
+          amount: 10000,
+          operation: 'credit',
+        })
+        .expect(200);
+
       // Plataforma pode processar pagamento para qualquer produtor
       const response = await request(app.getHttpServer())
         .post('/payment')
@@ -677,6 +751,7 @@ describe('PaymentController (e2e)', () => {
 
       const data = getData(response);
       expect(data.producerId).toBe(producerId);
+      expect(data.buyerId).toBe(platformId); // O comprador é o usuário da plataforma
     });
 
     it('should reject payment when amount exceeds maximum', () => {
@@ -692,24 +767,14 @@ describe('PaymentController (e2e)', () => {
     });
 
     it('should update balance correctly when user has existing balance', async () => {
-      // Criar saldo inicial de 400
-      await request(app.getHttpServer())
-        .patch('/balance')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({
-          amount: 400,
-          operation: 'credit',
-        })
-        .expect(200);
-
-      // Verificar saldo inicial
+      // Verificar saldo inicial (já tem 10000 do beforeEach)
       const initialBalanceResponse = await request(app.getHttpServer())
         .get('/balance')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       const initialBalanceData = getData(initialBalanceResponse);
-      expect(initialBalanceData.amount).toBe(400);
+      const initialBalance = initialBalanceData.amount;
 
       // Processar primeiro pagamento
       const payment1Response = await request(app.getHttpServer())
@@ -725,14 +790,15 @@ describe('PaymentController (e2e)', () => {
       const payment1Data = getData(payment1Response);
 
       // Verificar saldo após primeiro pagamento
+      // Saldo final = inicial - amount + producerCommission
       const balance1Response = await request(app.getHttpServer())
         .get('/balance')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       const balance1Data = getData(balance1Response);
-      const expectedBalance1 = 400 + payment1Data.producerCommission;
-      expect(balance1Data.amount).toBe(expectedBalance1);
+      const expectedBalance1 = initialBalance - 1000 + payment1Data.producerCommission;
+      expect(balance1Data.amount).toBeCloseTo(expectedBalance1, 2);
 
       // Processar segundo pagamento
       const payment2Response = await request(app.getHttpServer())
@@ -747,16 +813,16 @@ describe('PaymentController (e2e)', () => {
 
       const payment2Data = getData(payment2Response);
 
-      // Verificar saldo após segundo pagamento (deve ser incrementado)
+      // Verificar saldo após segundo pagamento
+      // Saldo final = balance1 - amount + producerCommission
       const balance2Response = await request(app.getHttpServer())
         .get('/balance')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       const balance2Data = getData(balance2Response);
-      const expectedBalance2 = expectedBalance1 + payment2Data.producerCommission;
-      expect(balance2Data.amount).toBe(expectedBalance2);
-      expect(balance2Data.amount).toBeGreaterThan(expectedBalance1);
+      const expectedBalance2 = expectedBalance1 - 500 + payment2Data.producerCommission;
+      expect(balance2Data.amount).toBeCloseTo(expectedBalance2, 2);
     });
 
     it.skip('should enforce rate limiting on payment endpoint', async () => {

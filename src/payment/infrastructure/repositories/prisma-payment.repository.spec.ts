@@ -13,6 +13,7 @@ describe('PrismaPaymentRepository', () => {
     amount: 1000,
     country: 'BR',
     status: PaymentStatus.APPROVED,
+    buyerId: 'buyer-id',
     producerId: 'producer-id',
     affiliateId: 'affiliate-id',
     coproducerId: null,
@@ -56,6 +57,7 @@ describe('PrismaPaymentRepository', () => {
       const payment = PaymentEntity.create(
         1000,
         'BR',
+        'buyer-id',
         'producer-id',
         'affiliate-id',
         null,
@@ -73,6 +75,7 @@ describe('PrismaPaymentRepository', () => {
       expect(prismaService.client.payment.create).toHaveBeenCalled();
       expect(result).toBeInstanceOf(PaymentEntity);
       expect(result.amount).toBe(1000);
+      expect(result.buyerId).toBe('buyer-id');
     });
   });
 

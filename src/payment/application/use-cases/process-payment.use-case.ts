@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException, UnprocessableEntityException } from '@nestjs/common';
 import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { PaymentEntity } from '../../domain/entities/payment.entity';
@@ -18,6 +18,7 @@ import type { IUserRepository } from '../../../auth/domain/repositories/user.rep
 export interface ProcessPaymentDto {
   amount: number;
   country: string;
+  buyerId: string;
   producerId: string;
   affiliateId?: string;
   coproducerId?: string;
@@ -44,6 +45,14 @@ export class ProcessPaymentUseCase {
   async execute(dto: ProcessPaymentDto): Promise<PaymentEntity> {
     if (dto.amount <= 0) {
       throw new BadRequestException('Payment amount must be positive');
+    }
+
+    // Validação inicial de saldo (para resposta rápida, mas validação final será na transação)
+    const buyerBalance = await this.balanceRepository.findByUserId(dto.buyerId);
+    if (!buyerBalance || !buyerBalance.hasAvailableBalance(dto.amount)) {
+      throw new UnprocessableEntityException(
+        `Insufficient balance. Required: ${dto.amount}, Available: ${buyerBalance?.amount || 0}`
+      );
     }
 
     const producer = await this.userRepository.findById(dto.producerId);
@@ -123,6 +132,7 @@ export class ProcessPaymentUseCase {
     const payment = PaymentEntity.create(
       dto.amount,
       dto.country,
+      dto.buyerId,
       dto.producerId,
       dto.affiliateId || null,
       dto.coproducerId || null,
@@ -141,6 +151,17 @@ export class ProcessPaymentUseCase {
     // Isso garante que se uma atualização de saldo falhar, o pagamento também será revertido
     return await this.prisma.client.$transaction(
       async (tx) => {
+        // Validar saldo novamente dentro da transação para evitar race conditions
+        const buyerBalanceInTx = await this.balanceRepository.findByUserId(dto.buyerId, tx);
+        if (!buyerBalanceInTx || !buyerBalanceInTx.hasAvailableBalance(dto.amount)) {
+          throw new UnprocessableEntityException(
+            `Insufficient balance. Required: ${dto.amount}, Available: ${buyerBalanceInTx?.amount || 0}`
+          );
+        }
+
+        // Debitar saldo do comprador (deve ser feito primeiro)
+        await this.balanceRepository.atomicUpdate(dto.buyerId, -dto.amount, tx);
+
         // Cria o pagamento dentro da transação
         const created = await tx.payment.create({
           data: {
@@ -148,6 +169,7 @@ export class ProcessPaymentUseCase {
             amount: payment.amount,
             country: payment.country,
             status: payment.status,
+            buyerId: payment.buyerId,
             producerId: payment.producerId,
             affiliateId: payment.affiliateId,
             coproducerId: payment.coproducerId,
@@ -160,7 +182,7 @@ export class ProcessPaymentUseCase {
           },
         });
 
-        // Atualiza saldos de forma atômica dentro da mesma transação
+        // Atualiza saldos de forma atômica dentro da mesma transação (créditos)
         await this.updateBalancesInTransaction(
           tx,
           dto.producerId,

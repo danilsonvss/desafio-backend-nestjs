@@ -41,6 +41,7 @@ model User {
   affiliateAffiliations   Affiliation[] @relation("AffiliateAffiliations")
   producerCoproductions   Coproduction[] @relation("ProducerCoproductions")
   coproducerCoproductions Coproduction[] @relation("CoproducerCoproductions")
+  buyerPayments         Payment[]      @relation("BuyerPayments")
   producerPayments        Payment[]      @relation("ProducerPayments")
   affiliatePayments       Payment[]      @relation("AffiliatePayments")
 
@@ -103,6 +104,7 @@ model Payment {
   amount            Decimal       @db.Decimal(10, 2)
   country           String
   status            PaymentStatus @default(APPROVED)
+  buyerId           String
   producerId        String
   affiliateId       String?
   coproducerId      String?
@@ -114,6 +116,7 @@ model Payment {
   platformCommission Decimal      @db.Decimal(10, 2)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
+  buyer             User          @relation("BuyerPayments", fields: [buyerId], references: [id], onDelete: Cascade)
   producer          User          @relation("ProducerPayments", fields: [producerId], references: [id], onDelete: Cascade)
   affiliate         User?         @relation("AffiliatePayments", fields: [affiliateId], references: [id], onDelete: SetNull)
 

@@ -6,6 +6,7 @@ export class PaymentEntity {
     public readonly amount: number,
     public readonly country: string,
     public readonly status: PaymentStatus,
+    public readonly buyerId: string,
     public readonly producerId: string,
     public readonly affiliateId: string | null,
     public readonly coproducerId: string | null,
@@ -30,6 +31,10 @@ export class PaymentEntity {
       throw new Error('Country is required');
     }
 
+    if (!this.buyerId || this.buyerId.trim().length === 0) {
+      throw new Error('Buyer ID is required');
+    }
+
     if (!this.producerId || this.producerId.trim().length === 0) {
       throw new Error('Producer ID is required');
     }
@@ -50,6 +55,7 @@ export class PaymentEntity {
   static create(
     amount: number,
     country: string,
+    buyerId: string,
     producerId: string,
     affiliateId: string | null,
     coproducerId: string | null,
@@ -66,6 +72,7 @@ export class PaymentEntity {
       amount,
       country.toUpperCase().trim(),
       PaymentStatus.APPROVED,
+      buyerId.trim(),
       producerId.trim(),
       affiliateId?.trim() || null,
       coproducerId?.trim() || null,
@@ -85,6 +92,7 @@ export class PaymentEntity {
     amount: number | string | any;
     country: string;
     status: string;
+    buyerId: string;
     producerId: string;
     affiliateId: string | null;
     coproducerId: string | null;
@@ -115,6 +123,7 @@ export class PaymentEntity {
       parseDecimal(data.amount),
       data.country,
       data.status as PaymentStatus,
+      data.buyerId,
       data.producerId,
       data.affiliateId,
       data.coproducerId,

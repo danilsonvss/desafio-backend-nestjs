@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, UnprocessableEntityException } from '@nestjs/common';
 import { ProcessPaymentUseCase } from './process-payment.use-case';
 import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
 import { INJECTION_TOKENS } from '../../../shared/constants/injection-tokens';
@@ -137,21 +137,20 @@ describe('ProcessPaymentUseCase', () => {
       const dto = {
         amount: 1000,
         country: 'BR',
+        buyerId: 'buyer-id',
         producerId: 'producer-id',
       };
+
+      // Criar balance com saldo suficiente
+      const buyerBalanceWithCredit = BalanceEntity.create('buyer-id').credit(2000);
 
       const transactionTax = TaxEntity.create('BR', TaxType.TRANSACTION, 5);
       const platformTax = TaxEntity.create('BR', TaxType.PLATFORM, 2);
 
-      userRepository.findById.mockResolvedValue(mockProducer);
-      taxRepository.findByCountryAndType
-        .mockResolvedValueOnce(transactionTax)
-        .mockResolvedValueOnce(platformTax);
-      userRepository.findByRole.mockResolvedValue(mockPlatform);
-
       const payment = PaymentEntity.create(
         1000,
         'BR',
+        'buyer-id',
         'producer-id',
         null,
         null,
@@ -169,6 +168,7 @@ describe('ProcessPaymentUseCase', () => {
         amount: payment.amount,
         country: payment.country,
         status: payment.status,
+        buyerId: payment.buyerId,
         producerId: payment.producerId,
         affiliateId: payment.affiliateId,
         coproducerId: payment.coproducerId,
@@ -189,10 +189,22 @@ describe('ProcessPaymentUseCase', () => {
         },
       };
 
-      // Configura o mock da transação para executar o callback com o mockTxInstance
+      // Configura o mock da transação ANTES de configurar os outros mocks
       mockPrismaService.client.$transaction.mockImplementation(async (callback) => {
         return await callback(mockTxInstance);
       });
+
+      // Mock para validação inicial (fora da transação) e dentro da transação
+      balanceRepository.findByUserId.mockImplementation((userId, tx) => {
+        // Sempre retorna o saldo, independente de estar dentro ou fora da transação
+        return Promise.resolve(buyerBalanceWithCredit);
+      });
+
+      userRepository.findById.mockResolvedValue(mockProducer);
+      taxRepository.findByCountryAndType
+        .mockResolvedValueOnce(transactionTax)
+        .mockResolvedValueOnce(platformTax);
+      userRepository.findByRole.mockResolvedValue(mockPlatform);
 
       // Mock do atomicUpdate
       balanceRepository.atomicUpdate.mockResolvedValue(
@@ -203,14 +215,55 @@ describe('ProcessPaymentUseCase', () => {
 
       expect(result).toBeInstanceOf(PaymentEntity);
       expect(result.status).toBe(PaymentStatus.APPROVED);
+      expect(result.buyerId).toBe('buyer-id');
       expect(result.producerId).toBe('producer-id');
-      expect(balanceRepository.atomicUpdate).toHaveBeenCalled();
+      expect(balanceRepository.atomicUpdate).toHaveBeenCalledWith('buyer-id', -1000, expect.anything());
+      expect(balanceRepository.atomicUpdate).toHaveBeenCalledWith('producer-id', 930, expect.anything());
+    });
+
+    it('should throw UnprocessableEntityException for insufficient balance', async () => {
+      const dto = {
+        amount: 1000,
+        country: 'BR',
+        buyerId: 'buyer-id',
+        producerId: 'producer-id',
+      };
+
+      const buyerBalance = BalanceEntity.create('buyer-id');
+      buyerBalance.credit(100); // Saldo insuficiente
+
+      balanceRepository.findByUserId.mockResolvedValue(buyerBalance);
+
+      try {
+        await useCase.execute(dto);
+        fail('Should have thrown UnprocessableEntityException');
+      } catch (error) {
+        expect(error).toBeInstanceOf(UnprocessableEntityException);
+        expect(error.message).toContain('Insufficient balance');
+        // Verificar que não chegou a validar o produtor
+        expect(userRepository.findById).not.toHaveBeenCalled();
+      }
+    });
+
+    it('should throw UnprocessableEntityException when buyer has no balance', async () => {
+      const dto = {
+        amount: 1000,
+        country: 'BR',
+        buyerId: 'buyer-id',
+        producerId: 'producer-id',
+      };
+
+      balanceRepository.findByUserId.mockResolvedValue(null);
+
+      await expect(useCase.execute(dto)).rejects.toThrow(UnprocessableEntityException);
+      await expect(useCase.execute(dto)).rejects.toThrow('Insufficient balance');
     });
 
     it('should throw BadRequestException for negative amount', async () => {
       const dto = {
         amount: -100,
         country: 'BR',
+        buyerId: 'buyer-id',
         producerId: 'producer-id',
       };
 
@@ -221,12 +274,26 @@ describe('ProcessPaymentUseCase', () => {
       const dto = {
         amount: 1000,
         country: 'BR',
+        buyerId: 'buyer-id',
         producerId: 'nonexistent',
       };
 
-      userRepository.findById.mockResolvedValue(null);
+      // Criar balance com saldo suficiente
+      const buyerBalanceWithCredit = BalanceEntity.create('buyer-id').credit(2000);
+
+      // Mock da transação (não será executada porque o produtor não será encontrado)
+      mockPrismaService.client.$transaction.mockImplementation(async (callback) => {
+        return await callback({ payment: { create: jest.fn() } });
+      });
+
+      // Mock será chamado duas vezes: validação inicial e na transação
+      balanceRepository.findByUserId.mockImplementation((userId, tx) => {
+        return Promise.resolve(buyerBalanceWithCredit);
+      });
+      userRepository.findById.mockResolvedValue(null); // Produtor não encontrado
 
       await expect(useCase.execute(dto)).rejects.toThrow(NotFoundException);
+      expect(userRepository.findById).toHaveBeenCalledWith('nonexistent');
     });
   });
 });

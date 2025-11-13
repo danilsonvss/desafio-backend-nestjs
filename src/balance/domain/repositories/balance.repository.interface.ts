@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 
 export interface IBalanceRepository {
   create(balance: BalanceEntity): Promise<BalanceEntity>;
-  findByUserId(userId: string): Promise<BalanceEntity | null>;
+  findByUserId(userId: string, tx?: Prisma.TransactionClient): Promise<BalanceEntity | null>;
   findById(id: string): Promise<BalanceEntity | null>;
   update(balance: BalanceEntity): Promise<BalanceEntity>;
   existsByUserId(userId: string): Promise<boolean>;

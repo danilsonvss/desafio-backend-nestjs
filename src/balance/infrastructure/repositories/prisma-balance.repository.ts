@@ -20,8 +20,9 @@ export class PrismaBalanceRepository implements IBalanceRepository {
     return BalanceEntity.fromPrisma(created);
   }
 
-  async findByUserId(userId: string): Promise<BalanceEntity | null> {
-    const balance = await this.prisma.client.balance.findUnique({
+  async findByUserId(userId: string, tx?: Prisma.TransactionClient): Promise<BalanceEntity | null> {
+    const client = tx || this.prisma.client;
+    const balance = await client.balance.findUnique({
       where: { userId },
     });
 

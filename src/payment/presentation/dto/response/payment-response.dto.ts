@@ -15,6 +15,9 @@ export class PaymentResponseDto {
   @ApiProperty({ enum: PaymentStatus, example: PaymentStatus.APPROVED, description: 'Status do pagamento' })
   status: PaymentStatus;
 
+  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000', description: 'ID do comprador' })
+  buyerId: string;
+
   @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000', description: 'ID do produtor' })
   producerId: string;
 
@@ -54,6 +57,7 @@ export class PaymentResponseDto {
     dto.amount = entity.amount;
     dto.country = entity.country;
     dto.status = entity.status;
+    dto.buyerId = entity.buyerId;
     dto.producerId = entity.producerId;
     dto.affiliateId = entity.affiliateId;
     dto.coproducerId = entity.coproducerId;

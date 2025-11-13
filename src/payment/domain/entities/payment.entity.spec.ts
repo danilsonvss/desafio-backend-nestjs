@@ -7,6 +7,7 @@ describe('PaymentEntity', () => {
       const payment = PaymentEntity.create(
         1000,
         'BR',
+        'buyer-id',
         'producer-id',
         'affiliate-id',
         null,
@@ -22,6 +23,7 @@ describe('PaymentEntity', () => {
       expect(payment.amount).toBe(1000);
       expect(payment.country).toBe('BR');
       expect(payment.status).toBe(PaymentStatus.APPROVED);
+      expect(payment.buyerId).toBe('buyer-id');
       expect(payment.producerId).toBe('producer-id');
       expect(payment.affiliateId).toBe('affiliate-id');
       expect(payment.coproducerId).toBeNull();
@@ -40,6 +42,7 @@ describe('PaymentEntity', () => {
       const payment = PaymentEntity.create(
         1000,
         '  br  ',
+        'buyer-id',
         'producer-id',
         null,
         null,
@@ -54,10 +57,11 @@ describe('PaymentEntity', () => {
       expect(payment.country).toBe('BR');
     });
 
-    it('should trim producer, affiliate and coproducer IDs', () => {
+    it('should trim buyer, producer, affiliate and coproducer IDs', () => {
       const payment = PaymentEntity.create(
         1000,
         'BR',
+        '  buyer-id  ',
         '  producer-id  ',
         '  affiliate-id  ',
         '  coproducer-id  ',
@@ -69,6 +73,7 @@ describe('PaymentEntity', () => {
         130,
       );
 
+      expect(payment.buyerId).toBe('buyer-id');
       expect(payment.producerId).toBe('producer-id');
       expect(payment.affiliateId).toBe('affiliate-id');
       expect(payment.coproducerId).toBe('coproducer-id');
@@ -79,6 +84,7 @@ describe('PaymentEntity', () => {
         PaymentEntity.create(
           -100,
           'BR',
+          'buyer-id',
           'producer-id',
           null,
           null,
@@ -97,6 +103,7 @@ describe('PaymentEntity', () => {
         PaymentEntity.create(
           0,
           'BR',
+          'buyer-id',
           'producer-id',
           null,
           null,
@@ -115,6 +122,7 @@ describe('PaymentEntity', () => {
         PaymentEntity.create(
           1000,
           '',
+          'buyer-id',
           'producer-id',
           null,
           null,
@@ -128,11 +136,31 @@ describe('PaymentEntity', () => {
       }).toThrow('Country is required');
     });
 
+    it('should throw error for empty buyer ID', () => {
+      expect(() => {
+        PaymentEntity.create(
+          1000,
+          'BR',
+          '',
+          'producer-id',
+          null,
+          null,
+          0,
+          0,
+          1000,
+          null,
+          null,
+          0,
+        );
+      }).toThrow('Buyer ID is required');
+    });
+
     it('should throw error for empty producer ID', () => {
       expect(() => {
         PaymentEntity.create(
           1000,
           'BR',
+          'buyer-id',
           '',
           null,
           null,
@@ -151,6 +179,7 @@ describe('PaymentEntity', () => {
         PaymentEntity.create(
           1000,
           'BR',
+          'buyer-id',
           'producer-id',
           null,
           null,
@@ -169,6 +198,7 @@ describe('PaymentEntity', () => {
         PaymentEntity.create(
           1000,
           'BR',
+          'buyer-id',
           'producer-id',
           null,
           null,
@@ -190,6 +220,7 @@ describe('PaymentEntity', () => {
         amount: 1000,
         country: 'BR',
         status: PaymentStatus.APPROVED,
+        buyerId: 'buyer-id',
         producerId: 'producer-id',
         affiliateId: 'affiliate-id',
         coproducerId: null,
@@ -210,6 +241,7 @@ describe('PaymentEntity', () => {
       expect(payment.amount).toBe(1000);
       expect(payment.country).toBe('BR');
       expect(payment.status).toBe(PaymentStatus.APPROVED);
+      expect(payment.buyerId).toBe('buyer-id');
     });
 
     it('should convert string amounts to number', () => {
@@ -218,6 +250,7 @@ describe('PaymentEntity', () => {
         amount: '1000',
         country: 'BR',
         status: PaymentStatus.APPROVED,
+        buyerId: 'buyer-id',
         producerId: 'producer-id',
         affiliateId: null,
         coproducerId: null,
@@ -242,6 +275,7 @@ describe('PaymentEntity', () => {
         amount: { toNumber: () => 1000 },
         country: 'BR',
         status: PaymentStatus.APPROVED,
+        buyerId: 'buyer-id',
         producerId: 'producer-id',
         affiliateId: null,
         coproducerId: null,

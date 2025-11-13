@@ -390,6 +390,16 @@ describe('TaxController (e2e)', () => {
 
       const producerToken = getData(loginResponse).accessToken;
 
+      // Criar saldo para o comprador (produtor) para poder fazer pagamento
+      await request(app.getHttpServer())
+        .patch('/balance')
+        .set('Authorization', `Bearer ${producerToken}`)
+        .send({
+          amount: 10000,
+          operation: 'credit',
+        })
+        .expect(200);
+
       const paymentResponse = await request(app.getHttpServer())
         .post('/payment')
         .set('Authorization', `Bearer ${producerToken}`)

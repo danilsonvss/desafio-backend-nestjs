@@ -70,7 +70,13 @@ export class PaymentController {
       );
     }
 
-    const payment = await this.processPaymentUseCase.execute(dto);
+    // O comprador é sempre o usuário autenticado
+    const paymentDto = {
+      ...dto,
+      buyerId: user.id,
+    };
+
+    const payment = await this.processPaymentUseCase.execute(paymentDto);
     return PaymentResponseDto.fromEntity(payment);
   }
 }
